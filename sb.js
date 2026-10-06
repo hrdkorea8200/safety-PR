@@ -13,7 +13,8 @@ SB.configured = function(){
   const u = String(C.SUPABASE_URL || ''), k = String(C.SUPABASE_ANON_KEY || '');
   return !!u && !!k && !/YOUR[-_]/i.test(u + k);
 };
-const base = () => String(C.SUPABASE_URL).replace(/\/+$/, '');
+/* 주소 뒤에 /rest/v1 같은 경로가 붙어 있어도(Data API 화면에서 그대로 복사한 경우) 자동으로 사이트 주소까지만 사용합니다 */
+const base = () => { const u = String(C.SUPABASE_URL || '').trim(); try{ return new URL(u).origin; }catch(e){ return u.replace(/\/+$/, ''); } };
 
 function loadSession(){ try{ return JSON.parse(sessionStorage.getItem(SK) || 'null'); }catch(e){ return null; } }
 function saveSession(s){ try{ if(s) sessionStorage.setItem(SK, JSON.stringify(s)); else sessionStorage.removeItem(SK); }catch(e){} }
@@ -21,7 +22,10 @@ SB.hasSession = () => !!loadSession();
 
 async function raw(path, opts, token){
   const o = Object.assign({}, opts || {});
-  o.headers = Object.assign({ apikey:C.SUPABASE_ANON_KEY, Authorization:'Bearer ' + (token || C.SUPABASE_ANON_KEY) }, o.headers || {});
+  /* 예전 anon 키(eyJ…)는 JWT라 Authorization에도 넣지만, 새 publishable 키(sb_publishable_…)는 JWT가 아니므로 apikey로만 보냅니다 */
+  const key = String(C.SUPABASE_ANON_KEY || '').trim();
+  const bearer = token || (key.indexOf('eyJ') === 0 ? key : '');
+  o.headers = Object.assign({ apikey:key }, bearer ? { Authorization:'Bearer ' + bearer } : {}, o.headers || {});
   try{ return await fetch(base() + path, o); }
   catch(e){ throw { status:0, message:'네트워크 연결을 확인해 주세요.' }; }
 }
@@ -55,7 +59,16 @@ SB.login = async function(email, password){
   const res = await raw('/auth/v1/token?grant_type=password', { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ email:email, password:password }) });
   const d = await json(res);
   if(!res.ok || !d || !d.access_token){
-    throw { status:res.status, message: res.status === 429 ? '시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.' : (res.status === 400 ? '암호가 올바르지 않습니다.' : '로그인하지 못했습니다. 잠시 후 다시 시도해 주세요.') };
+    const code = (d && (d.error_code || d.code)) || '';
+    let msg;
+    if(res.status === 429) msg = '시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.';
+    else if(res.status === 400 && code === 'email_not_confirmed') msg = '이메일 인증이 안 된 계정입니다. Supabase Users에서 Auto Confirm User를 체크해 계정을 다시 만들어 주세요.';
+    else if(res.status === 400) msg = '암호가 올바르지 않습니다. (이메일 또는 비밀번호 확인)';
+    else if(res.status === 401 || res.status === 403) msg = '연결 키(SUPABASE_ANON_KEY)가 올바르지 않습니다. site.config.js의 키를 다시 확인해 주세요. (코드 ' + res.status + ')';
+    else if(res.status === 404) msg = '연결 주소(SUPABASE_URL)가 올바르지 않습니다. https://…supabase.co 까지만 입력했는지 확인해 주세요. (코드 404)';
+    else if(res.status === 422) msg = '이메일 로그인이 꺼져 있거나 이메일 형식이 올바르지 않습니다. (코드 422' + (code ? ' ' + code : '') + ')';
+    else msg = '로그인하지 못했습니다. 잠시 후 다시 시도해 주세요. (코드 ' + res.status + ')';
+    throw { status:res.status, message:msg };
   }
   storeTokens(d);
   let ok = false;

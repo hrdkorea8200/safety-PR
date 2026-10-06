@@ -53,7 +53,7 @@ supabase/         데이터베이스 설정 SQL 3개
 ### 4단계. 연결 값 복사해서 설정 파일에 넣기
 1. Supabase 왼쪽 아래 **Project Settings → API**(또는 Data API)에서 두 값을 복사
    - **Project URL** (`https://xxxx.supabase.co`)
-   - **anon public** 키
+   - **공개 키**: `sb_publishable_…`(새 방식) 또는 `anon public`(eyJ…로 시작, 예전 방식) 중 보이는 것. `secret`/`service_role` 키는 절대 아님
 2. `site.config.js` 맨 위에서 아래 4개를 바꿉니다.
    ```js
    SUPABASE_URL: 'https://xxxx.supabase.co',
