@@ -2,10 +2,10 @@
 window.SITE_CONFIG = (function(){
 const CONFIG = {
   /* ===== 서버(Supabase) 연결 — README의 3~4단계에서 복사해 온 값을 넣으세요 ===== */
-  SUPABASE_URL: 'https://YOUR-PROJECT-ID.supabase.co',
-  SUPABASE_ANON_KEY: 'YOUR-ANON-KEY',        /* anon(eyJ…로 시작) 또는 publishable(sb_publishable_…) 공개 키. 노출되어도 되는 키입니다 */
+  SUPABASE_URL: 'https://lwiyhvixcjghiucxcont.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_JvjudDsxn0aY_maoR5n_qw_-YZkm6yP',        /* anon(eyJ…로 시작) 또는 publishable(sb_publishable_…) 공개 키. 노출되어도 되는 키입니다 */
   ADMIN_LOGIN_MODE: 'pin',                    /* 'pin' = 숫자 암호만 입력 / 'password' = 이메일+비밀번호 입력 */
-  ADMIN_EMAIL: 'admin@example.com',           /* 관리자 계정 이메일 (pin 모드에서 자동 사용) */
+  ADMIN_EMAIL: 'hrdkoreagemini@gmail.com',           /* 관리자 계정 이메일 (pin 모드에서 자동 사용) */
   ADMIN_PIN_SUFFIX: '-safety',                /* pin 모드: 서버 비밀번호 = 숫자 암호 + 이 문자 (길이 요건 충족용) */
 
   /* ===== 사업장 정보 ===== */
