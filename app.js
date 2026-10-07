@@ -51,7 +51,7 @@ function renderHome(){
   $('#p-home').innerHTML = `
     <div class="hero">
       <div class="eyebrow">SAFE OFFICE</div>
-      <h1>${esc(CONFIG.orgName)}<br>사무실 안전 길잡이</h1>
+      <h1>${esc(CONFIG.orgName)}<br>사무실 안전 지킴이</h1>
       <p>${esc(CONFIG.tagline)}</p>
       <div class="hero-actions">
         <button class="btn warn" type="button" data-go="report">📣 안전신문고 제보하기</button>
@@ -356,6 +356,6 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape'){ const lb = $
 /* ===================== 시작 ===================== */
 window.U.initTheme();
 $('#orgName').textContent = CONFIG.orgName;
-document.title = CONFIG.orgName + ' · 사무실 안전 길잡이';
+document.title = CONFIG.orgName + ' · 사무실 안전 지킴이';
 renderHome(); renderRules(); renderEmergency(); renderReport(); renderTabs();
 })();
