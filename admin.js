@@ -13,7 +13,7 @@ function renderSetup(){
   root.innerHTML = `<div class="login"><div class="card">
       <h2 style="margin:0">⚙️ 서버 연결 설정이 필요합니다</h2>
       <p class="muted small"><b>site.config.js</b>의 SUPABASE_URL, SUPABASE_ANON_KEY를 입력해 주세요. 자세한 방법은 README의 3~4단계를 참고하세요.</p>
-      <a class="btn ghost block" href="./">← 안전 길잡이로 돌아가기</a></div></div>`;
+      <a class="btn ghost block" href="./">← 안전 지킴이로 돌아가기</a></div></div>`;
 }
 
 function renderLogin(msg){
@@ -29,7 +29,7 @@ function renderLogin(msg){
       ${fields}
       <div class="err" id="lerr" role="alert">${esc(msg || '')}</div>
       <button class="btn primary block" id="btnLogin" type="button">확인</button>
-      <a class="btn ghost block" href="./">← 안전 길잡이로 돌아가기</a>
+      <a class="btn ghost block" href="./">← 안전 지킴이로 돌아가기</a>
     </div></div>`;
   const submit = async () => {
     const v = $('#pw').value;
