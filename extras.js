@@ -1,355 +1,576 @@
-/* 이용자 편의 기능 모음
-   1) 글자 크기 · 고대비 설정   2) 전체 검색   3) 오늘의 안전·친환경 퀴즈
-   4) 이달의 안전·친환경 캠페인 카드   5) 이달의 친환경 실천 챌린지 카드
-   app.js 가 화면을 그린 뒤 Extras.mountHome() / Extras.mountEco() / Extras.onShow() 를 불러 줍니다. */
 (function(){
 'use strict';
-const { $, $$, esc, toast } = window.U;
-const C = window.CONTENT || {};
-const SHOOT = window.SHOOT || { EQUIP:[], COMMON:{} };
-const QUIZ = window.QUIZ || [];
-const store = {
-  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
-  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+const CONFIG = window.SITE_CONFIG;
+const { TIPS, RULES10, SELFCHECK, RULES, EMERGENCY, ECO_TOP, ECO_SELFCHECK, ECO } = window.CONTENT;
+const { $, $$, esc, toast, nowLocal } = window.U;
+const SB = window.SB;
+const MAX_PHOTOS = 3;
+const MAX_PHOTO_CHARS = 180000;
+const JPEG_RE = /^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/;
+
+/* ===================== 탭 / 라우팅 ===================== */
+const ICONS = {
+  home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  rules:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/>',
+  emergency:'<path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5"/><path d="M12 18h.01"/>',
+  report:'<path d="M3 11v2a1 1 0 001 1h2l7 4V6L6 10H4a1 1 0 00-1 1z"/><path d="M16 9a4 4 0 010 6"/><path d="M19 6.5a8 8 0 010 11"/>',
+  shoot:'<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/>',
+  menu:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  admin:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="M9 12h6M9 16h4"/>'
 };
-const pad = n => String(n).padStart(2, '0');
-const today = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
-const ym = () => today().slice(0, 7);
-const month = () => new Date().getMonth() + 1;
-const dayNum = () => { const t = new Date(); return Math.floor(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) / 86400000); };
-const strip = h => String(h == null ? '' : h).replace(/<[^>]+>/g, '');
-const E = {};
-
-/* ===================== 1) 글자 크기 · 고대비 ===================== */
-const A11Y_KEYS = { fs:'a11y_fs', hc:'a11y_hc' };
-function a11yGet(){ return { fs:String(store.get(A11Y_KEYS.fs, '0')), hc:store.get(A11Y_KEYS.hc, '0') === '1' || store.get(A11Y_KEYS.hc, 0) === 1 }; }
-function a11yApply(){
-  const s = a11yGet(), r = document.documentElement;
-  if(s.fs === '1' || s.fs === '2') r.setAttribute('data-fs', s.fs); else r.removeAttribute('data-fs');
-  if(s.hc) r.setAttribute('data-contrast', 'high'); else r.removeAttribute('data-contrast');
+/* 화면(페이지) 목록: 주소(#id)로 열 수 있는 모든 화면 */
+const TABS = [
+  { id:'home' }, { id:'menu' }, { id:'rules' }, { id:'emergency' }, { id:'report' }, { id:'shoot' }, { id:'eco' }, { id:'search' }, { id:'quiz' },
+  { id:'admin', href:'admin.html' }   /* 숫자 암호 입력 화면으로 이동 */
+];
+/* 하단 메뉴는 3칸만: 홈 / 바로가기 / 안전신문고. 안전수칙·비상대응·촬영안전은 '바로가기'(또는 홈 퀵 메뉴)로 들어가며, 그 화면에서는 '바로가기'가 켜져 있습니다. */
+const BAR = [
+  { id:'home',   label:'홈',        on:['home'] },
+  { id:'menu',   label:'바로가기',  on:['menu','rules','emergency','shoot','eco','search','quiz'] },
+  { id:'report', label:'안전신문고', on:['report'] }
+];
+/* 주소 형식: #탭  또는  #탭/세부 (예: #shoot/camera-01) */
+function hashParts(){
+  const h = (location.hash || '').replace(/^#/, ''), i = h.indexOf('/');
+  if(i < 0) return [h, ''];
+  let sub = h.slice(i + 1); try{ sub = decodeURIComponent(sub); }catch(e){}
+  return [h.slice(0, i), sub];
 }
-function closeA11y(){ const o = $('#a11yOv'); if(o) o.remove(); }
-function openA11y(){
-  closeA11y();
-  const s = a11yGet();
-  const root = document.createElement('div');
-  root.id = 'a11yOv'; root.className = 'overlay';
-  root.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="화면 설정">
-      <div class="sheet-head"><b>🔠 화면 설정</b>
-        <button class="icon-btn" type="button" id="a11yClose" aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-      <div class="field"><span class="lab">글자 크기</span>
-        <div class="chips" id="a11yFs">${[['0','표준'],['1','크게'],['2','아주 크게']].map(o =>
-          `<label class="chip"><input type="radio" name="a11yfs" value="${o[0]}"${s.fs === o[0] ? ' checked' : ''}><span>${o[1]}</span></label>`).join('')}</div></div>
-      <div class="field"><span class="lab">고대비 모드</span>
-        <label class="chk" style="border:0;padding:0"><input type="checkbox" id="a11yHc"${s.hc ? ' checked' : ''}><span>글자와 배경의 대비를 높이고 테두리를 굵게 합니다</span></label></div>
-      <button class="btn ghost block" type="button" id="a11yReset">처음 상태로 되돌리기</button>
-      <p class="muted small">이 설정은 이 기기의 브라우저에만 저장됩니다.</p>
+let currentTab = hashParts()[0];
+if(!TABS.some(t => t.id === currentTab && !t.href)) currentTab = 'home';
+function renderTabs(){
+  $('#tabs').innerHTML = BAR.map(t =>
+    `<button class="tab" role="tab" type="button" data-tab="${t.id}" aria-selected="${t.on.includes(currentTab)}">
+       <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[t.id]}</svg><span>${t.label}</span></button>`).join('');
+  $$('main > .panel').forEach(p => p.hidden = (p.id !== 'p-' + currentTab));
+  if(currentTab === 'shoot' && window.ShootUI) window.ShootUI.route(hashParts()[1]);
+  if(window.Extras) window.Extras.onShow(currentTab);
+}
+function go(id){
+  const tt = TABS.find(t => t.id === id);
+  if(tt && tt.href){ location.href = tt.href; return; }
+  currentTab = id;
+  try{ history.replaceState(null, '', '#' + id); }catch(e){}
+  renderTabs();
+  window.scrollTo({ top:0, behavior:'auto' });
+}
+document.addEventListener('click', e => {
+  const tb = e.target.closest('[data-tab]'); if(tb){ go(tb.dataset.tab); return; }
+  const g = e.target.closest('[data-go]'); if(g){ go(g.dataset.go); }
+});
+window.addEventListener('hashchange', () => {
+  const hp = hashParts(), h = hp[0];
+  if(!TABS.some(t => t.id === h && !t.href)) return;
+  if(h !== currentTab){ currentTab = h; renderTabs(); window.scrollTo({ top:0 }); }
+  else if(h === 'shoot' && window.ShootUI){ window.ShootUI.route(hp[1]); }   /* 촬영안전 안에서 장비·메뉴 이동 */
+});
+
+/* ===================== 홈 ===================== */
+/* 안전·환경 서비스 바로가기 6칸 (홈과 '바로가기' 화면이 같이 씁니다) */
+function quickTiles(){
+  const t = (go, art, name, label) => `<button class="qtile" type="button" data-go="${go}" aria-label="${label} 바로가기">${art}<b>${name}</b><span>바로가기 ›</span></button>`;
+  return `<nav class="quick" aria-label="안전·환경 서비스 바로가기">
+      ${t('rules', ART.helmet, '안전정보', '안전정보')}
+      ${t('report', ART.bubble, '안전신문고', '안전신문고')}
+      <button class="qtile q-emg" type="button" data-go="emergency" aria-label="비상대응 바로가기">${ART.siren}<b>비상대응</b><span>바로가기 ›</span></button>
+      ${t('shoot', ART.camera, '촬영현장 안전가이드', '촬영현장 안전가이드')}
+      ${t('eco', ART.eco, '친환경', '친환경')}
+      <a class="qtile q-emg" href="tel:119" aria-label="긴급상황 119 전화">${ART.phone}<b>긴급상황 119</b><span>전화 걸기 ›</span></a>
+    </nav>`;
+}
+
+function renderHome(){
+  const tip = WX.todayTip(TIPS);
+  $('#p-home').innerHTML = `
+    <h1 class="sr-only">${esc(CONFIG.orgName)} ${esc(CONFIG.siteTitle || '안전·친환경 지킴이')}</h1>
+
+    <div id="wxSlot">${WX.render({ state:'loading', tip:tip })}</div>
+
+    <section class="card notice-card" aria-label="공지사항">
+      <div class="notice-head">
+        <div><h2>📢 공지사항</h2><p class="muted small">안전·환경과 관련한 소식을 알려 드립니다.</p></div>
+        <div class="mascot-wrap"><img class="mascot" src="./mascot.png" alt="확성기로 안내하는 한국산업인력공단 캐릭터" width="112" height="88"></div>
+      </div>
+      <div id="noticeList" class="notice-list"><p class="muted small">불러오는 중…</p></div>
+    </section>
+
+    <h2 class="q-title">안전·환경 서비스 바로가기</h2>
+    ${quickTiles()}
+
+    <div id="campSlot"></div>
+    <div id="quizSlot"></div>
+
+    <h2>아차사고, 왜 중요할까요?</h2>
+    <div class="card">
+      <p><b>아차사고</b>란 사고로 이어질 뻔했지만 다행히 다치거나 피해가 없었던 상황입니다. 하인리히 법칙(1:29:300)으로 널리 알려진 것처럼, 큰 사고 뒤에는 수많은 작은 징후가 있습니다.</p>
+      <div class="pyr" aria-label="하인리히 법칙 1:29:300">
+        <div class="a"><em>1</em>중대 사고</div>
+        <div class="b"><em>29</em>경미한 사고</div>
+        <div class="c"><em>300</em>아차사고 · 위험 징후</div>
+      </div>
+      <p class="muted small">제보는 잘잘못을 따지기 위한 것이 아니라 <b>같은 일이 반복되지 않게 하기 위한 것</b>입니다.</p>
+    </div>
+
+    <h2>사무실 안전 핵심 수칙 10</h2>
+    <ol class="rules10">${RULES10.map(r => `<li>${esc(r)}</li>`).join('')}</ol>`;
+}
+
+/* ===================== 바로가기 (모든 안전 서비스 모음) ===================== */
+function renderMenu(){
+  $('#p-menu').innerHTML = `
+    <div class="page-head">
+      <div>
+        <h2 style="margin-top:0">바로가기</h2>
+        <p class="muted">필요한 안전·환경 정보를 골라 보세요.</p>
+      </div>
+      ${window.U.mascotDuo()}
+    </div>
+    ${quickTiles()}
+    <div class="menu-more">
+      <button class="btn ghost" type="button" data-go="search">🔍 전체 검색</button>
+      <button class="btn ghost" type="button" data-go="quiz">🧠 오늘의 퀴즈</button>
+    </div>
+    <button class="btn ghost block" type="button" data-go="admin">🔒 관리자 (제보 확인 · 공지 관리)</button>`;
+}
+
+/* ===================== 친환경 (사무실 · 홍보물 · 행사 + 촬영현장 안내 연결) ===================== */
+function renderEco(){
+  $('#p-eco').innerHTML = `
+    <div class="page-head">
+      <div>
+        <h2 style="margin-top:0">🌱 친환경</h2>
+        <p class="muted">에너지를 아끼고 쓰레기를 줄이는 작은 습관이 더 안전한 일터와 깨끗한 환경을 함께 만듭니다.</p>
+      </div>
+      ${window.U.mascotEco(true)}
+    </div>
+
+    <div id="ecoChallenge"></div>
+
+    <h2>친환경 실천 8가지</h2>
+    <ol class="rules10">${ECO_TOP.map(r => `<li>${esc(r)}</li>`).join('')}</ol>
+
+    <div class="card">
+      <h3>✅ 내 자리 친환경 셀프체크</h3>
+      <p class="muted small">해당하는 항목을 눌러 보세요. (저장되지 않습니다)</p>
+      <div id="ecoChk">${ECO_SELFCHECK.map((t,i) => `<label class="chk"><input type="checkbox" data-i="${i}"><span>${esc(t)}</span></label>`).join('')}</div>
+      <div class="score"><span id="ecoScoreTxt">0 / ${ECO_SELFCHECK.length}</span><div class="bar"><i id="ecoScoreBar"></i></div></div>
+      <p class="note" id="ecoScoreMsg" style="margin-top:10px">체크하지 못한 항목은 오늘부터 하나씩 실천해 보세요.</p>
+    </div>
+
+    <h2>분야별 친환경 수칙</h2>
+    ${ECO.map((r, i) => accordion(r, i === 0, true)).join('')}
+
+    <div class="card">
+      <h3>🎬 촬영현장 친환경</h3>
+      <p class="muted small">촬영 전·중·후 체크리스트와 배터리·세트 폐기물·야외 자연환경·연기 효과 안내가 있습니다.</p>
+      <a class="btn ghost block" href="#shoot/common" style="margin-top:8px">촬영현장 친환경 수칙 보기</a>
+    </div>
+
+    <div class="card">
+      <h3>💡 친환경 아이디어 · 낭비 신고</h3>
+      <p class="muted small">새는 물, 켜져 있는 조명, 넘치는 쓰레기통, 개선 아이디어를 <b>안전신문고</b>(제보 유형: 위험요소 발견 · 개선 제안)로 알려 주세요.</p>
+      <button class="btn primary block" type="button" data-go="report" style="margin-top:8px">안전신문고로 제안하기</button>
     </div>`;
-  document.body.appendChild(root);
-  root.addEventListener('click', e => { if(e.target === root) closeA11y(); });
-  $('#a11yClose').addEventListener('click', closeA11y);
-  $('#a11yFs').addEventListener('change', e => { store.set(A11Y_KEYS.fs, e.target.value); a11yApply(); });
-  $('#a11yHc').addEventListener('change', e => { store.set(A11Y_KEYS.hc, e.target.checked ? '1' : '0'); a11yApply(); });
-  $('#a11yReset').addEventListener('click', () => { store.set(A11Y_KEYS.fs, '0'); store.set(A11Y_KEYS.hc, '0'); a11yApply(); closeA11y(); toast('화면 설정을 처음 상태로 되돌렸습니다.'); });
-  $('#a11yClose').focus();
-}
-document.addEventListener('keydown', e => { if(e.key === 'Escape') closeA11y(); });
-
-/* ===================== 2) 전체 검색 ===================== */
-let searchIndex = null;
-function buildIndex(){
-  const items = [];
-  const add = (sec, tab, sub, key, title, parts) => items.push({ sec:sec, tab:tab, sub:sub || '', key:key || '', title:title, text:parts.map(strip).filter(Boolean).join(' ') });
-  const acc = (sec, tab, list) => (list || []).forEach(r => add(sec, tab, '', r.title, (r.icon || '') + ' ' + r.title, [r.intro].concat(r.do || [], r.dont || [], r.steps || [], [r.note])));
-  acc('안전수칙', 'rules', C.RULES);
-  acc('비상대응', 'emergency', C.EMERGENCY);
-  acc('친환경', 'eco', C.ECO);
-  if(C.ECO_TOP) add('친환경', 'eco', '', '', '🌱 친환경 실천 8가지', C.ECO_TOP);
-  (C.ECO_CHALLENGES || []).forEach(c => add('친환경', 'eco', '', '', c.icon + ' ' + c.m + '월 챌린지 · ' + c.title, [c.desc].concat(c.actions)));
-  (SHOOT.EQUIP || []).forEach(e => add('촬영안전', 'shoot', e.id, '', e.icon + ' ' + e.name, [e.core].concat(e.before || [], e.during || [], e.after || [], e.never || [], (e.mistakes || []).map(m => m.join(' ')),
-    (e.env || []).map(x => x.t + ' ' + x.s.join(' ')), (e.emergency || []).map(x => x.t + ' ' + x.s.join(' ')), e.check || [], e.refs || [])));
-  const K = SHOOT.COMMON || {};
-  if(K.briefing) add('촬영안전', 'shoot', 'common', '', '🦺 촬영 전 5분 안전 브리핑', K.briefing);
-  (K.cast || []).forEach(m => add('촬영안전', 'shoot', 'common', m.t, '🎬 출연자 안전 · ' + m.t, m.s));
-  (K.weather || []).forEach(m => add('촬영안전', 'shoot', 'common', m.t, '🌦 ' + m.t, m.s));
-  (K.ecoGuide || []).forEach(m => add('촬영안전', 'shoot', 'common', m.t, '🌱 촬영 친환경 · ' + m.t, m.s));
-  (K.firstaid || []).forEach(m => add('촬영안전', 'shoot', 'common', m.t, '🩹 ' + m.t, m.s));
-  return items;
-}
-function searchRun(q){
-  const toks = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
-  if(!toks.length) return [];
-  if(!searchIndex) searchIndex = buildIndex();
-  const out = [];
-  searchIndex.forEach(it => {
-    const t = it.title.toLowerCase(), x = it.text.toLowerCase();
-    let score = 0;
-    for(const k of toks){
-      const inT = t.indexOf(k) >= 0, inX = x.indexOf(k) >= 0;
-      if(!inT && !inX) return;
-      score += (inT ? 5 : 0) + (inX ? 1 : 0);
-    }
-    out.push({ it:it, score:score });
+  $('#ecoChk').addEventListener('change', () => {
+    const n = $$('#ecoChk input:checked').length, tot = ECO_SELFCHECK.length;
+    $('#ecoScoreTxt').textContent = n + ' / ' + tot;
+    $('#ecoScoreBar').style.width = (n / tot * 100) + '%';
+    $('#ecoScoreMsg').textContent = n === tot ? '훌륭해요! 지구와 일터를 함께 지키고 계십니다. 🌍' : '체크하지 못한 항목은 오늘부터 하나씩 실천해 보세요.';
   });
-  out.sort((a, b) => b.score - a.score);
-  return out.slice(0, 40).map(o => o.it);
-}
-function snippet(it, toks){
-  const x = it.text, low = x.toLowerCase(); let p = -1;
-  for(const k of toks){ p = low.indexOf(k); if(p >= 0) break; }
-  if(p < 0) return esc(x.slice(0, 70)) + (x.length > 70 ? '…' : '');
-  const a = Math.max(0, p - 22), b = Math.min(x.length, p + 60);
-  let s = esc(x.slice(a, b));
-  const pat = toks.filter(Boolean).map(k => esc(k).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  if(pat) s = s.replace(new RegExp(pat, 'gi'), m => '<mark>' + m + '</mark>');
-  return (a > 0 ? '…' : '') + s + (b < x.length ? '…' : '');
-}
-function renderSearch(){
-  const p = $('#p-search'); if(!p) return;
-  p.innerHTML = `
-    <div class="page-head"><div><h2 style="margin-top:0">🔍 전체 검색</h2>
-      <p class="muted">안전수칙 · 비상대응 · 친환경 · 촬영안전에서 한 번에 찾아요.</p></div>${window.U.mascotDuo()}</div>
-    <div class="field"><input id="sQ" class="input" type="search" placeholder="예: 소화기, 분리배출, 드론, 열사병" autocomplete="off" aria-label="검색어"></div>
-    <div class="chips" id="sHint" aria-label="추천 검색어">${['소화기','멀티탭','분리배출','배터리','드론','열사병','지진','아동'].map(w => `<button type="button" class="chip s-chip" data-w="${w}"><span>${w}</span></button>`).join('')}</div>
-    <div id="sRes" class="s-res" aria-live="polite"></div>`;
-  const input = $('#sQ'), box = $('#sRes');
-  let list = [];
-  const draw = () => {
-    const q = input.value.trim();
-    if(!q){ box.innerHTML = '<p class="muted small">검색어를 입력하거나 위의 추천 검색어를 눌러 보세요.</p>'; list = []; return; }
-    list = searchRun(q);
-    const toks = q.toLowerCase().split(/\s+/).filter(Boolean);
-    box.innerHTML = list.length
-      ? `<p class="muted small">${list.length}건${list.length >= 40 ? ' (상위 40건)' : ''}</p>` + list.map((it, i) =>
-        `<button type="button" class="s-item" data-i="${i}"><span class="s-sec">${esc(it.sec)}</span><b>${esc(it.title)}</b><span class="s-snip">${snippet(it, toks)}</span></button>`).join('')
-      : '<div class="empty">검색 결과가 없습니다. 다른 낱말로 찾아 보세요.</div>';
-  };
-  input.addEventListener('input', draw);
-  $('#sHint').addEventListener('click', e => { const b = e.target.closest('[data-w]'); if(!b) return; input.value = b.dataset.w; draw(); input.focus(); });
-  box.addEventListener('click', e => {
-    const b = e.target.closest('[data-i]'); if(!b) return;
-    const it = list[+b.dataset.i]; if(!it) return;
-    if(it.key) E.pending = { tab:it.tab, key:it.key };
-    location.hash = it.tab === 'shoot' ? (it.sub ? '#shoot/' + it.sub : '#shoot') : '#' + it.tab;
-  });
-  draw();
-  setTimeout(() => { try{ input.focus(); }catch(e){} }, 50);
-}
-function openPending(tab){
-  const p = E.pending; if(!p || p.tab !== tab) return;
-  E.pending = null;
-  setTimeout(() => {
-    const panel = $('#p-' + tab); if(!panel) return;
-    const want = strip(p.key).trim();
-    const hit = $$('details > summary', panel).find(s => strip(s.textContent).indexOf(want) >= 0);
-    if(hit){ const d = hit.parentElement; d.open = true; hit.scrollIntoView({ block:'center', behavior:'smooth' }); }
-  }, 80);
 }
 
-/* ===================== 3) 오늘의 안전·친환경 퀴즈 ===================== */
-const QSTAT = 'quiz_stat', QDAY = 'quiz_day';
-function seededRand(seed){ let s = (seed >>> 0) || 1; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
-function shuffled(arr, rnd){ const a = arr.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-let PERM = null;
-function perm(){ if(!PERM) PERM = shuffled(QUIZ.map((_, i) => i), seededRand(20261008)); return PERM; }
-function dailyIndex(){ return perm()[dayNum() % QUIZ.length]; }
-function optionsOf(q, rnd){ return q.ox ? ['O', 'X'] : shuffled([q.a].concat(q.w), rnd); }
-function stats(){ return Object.assign({ total:0, correct:0, days:[], streak:0, last:'' }, store.get(QSTAT, {})); }
-function record(ok, daily){
-  const s = stats(); s.total++; if(ok) s.correct++;
-  if(daily){
-    const t = today();
-    if(s.last !== t){
-      const y = new Date(); y.setDate(y.getDate() - 1);
-      const yd = y.getFullYear() + '-' + pad(y.getMonth() + 1) + '-' + pad(y.getDate());
-      s.streak = (s.last === yd) ? (s.streak || 0) + 1 : 1; s.last = t;
-    }
-  }
-  store.set(QSTAT, s);
+/* ===================== 오늘의 안전 날씨 (이용자 화면) ===================== */
+function bindMascots(){
+  $$('.mascot').forEach(im => { if(im.dataset.bound) return; im.dataset.bound = '1'; im.addEventListener('error', () => { const w = im.closest('.mascot-wrap'); if(w) w.hidden = true; }); });
 }
-function qCard(q, opts, picked, extra){
-  const done = picked != null;
-  const right = q.a;
-  const optHtml = opts.map((o, i) => {
-    let cls = 'qz-opt';
-    if(done){ if(o === right) cls += ' ok'; else if(o === picked) cls += ' no'; else cls += ' dim'; }
-    return `<button type="button" class="${cls}" data-pick="${i}"${done ? ' disabled' : ''}><span class="qz-mark">${q.ox ? o : String.fromCharCode(65 + i)}</span><span>${q.ox ? (o === 'O' ? '맞다 (O)' : '틀리다 (X)') : esc(o)}</span></button>`;
-  }).join('');
-  const res = done ? `<div class="qz-res ${picked === right ? 'ok' : 'no'}" role="status"><b>${picked === right ? '🎉 정답입니다!' : '😮 아쉬워요, 오답입니다.'}</b>
-      ${picked !== right ? `<p>정답: <b>${esc(q.ox ? (right === 'O' ? 'O (맞다)' : 'X (틀리다)') : right)}</b></p>` : ''}<p>${esc(q.e)}</p></div>` : '';
-  return `<div class="qz-tag">${esc(q.c === '비상' ? '비상·응급' : q.c)}${q.ox ? ' · O/X' : ''}</div><p class="qz-q">${esc(q.q)}</p><div class="qz-opts">${optHtml}</div>${res}${extra || ''}`;
+async function loadWeather(){
+  const slot = $('#wxSlot'); if(!slot) return;
+  const tip = WX.todayTip(TIPS);
+  if(!SB.configured()){ slot.innerHTML = WX.render({ state:'error', tip:tip }); bindMascots(); return; }
+  try{ const w = await SB.getWeather(); slot.innerHTML = WX.render({ state:'ok', level:w.level, updatedAt:w.updatedAt, tip:tip }); }
+  catch(e){ slot.innerHTML = WX.render({ state:'error', tip:tip }); }
+  bindMascots();
 }
-function mountQuizCard(){
-  const slot = $('#quizSlot'); if(!slot || !QUIZ.length) return;
-  const qi = dailyIndex(), q = QUIZ[qi];
-  const seed = qi * 7919 + dayNum();
-  const opts = optionsOf(q, seededRand(seed));
-  const saved = store.get(QDAY, null);
-  let picked = (saved && saved.d === today() && saved.qi === qi) ? saved.pick : null;
-  const draw = () => {
-    slot.innerHTML = `<section class="card quiz-card" aria-label="오늘의 안전·친환경 퀴즈">
-        <div class="qz-head"><h2>🧠 오늘의 안전·친환경 퀴즈</h2><span class="muted small">매일 1문제</span></div>
-        ${qCard(q, opts, picked, `<button class="btn ghost block" type="button" data-go="quiz" style="margin-top:12px">퀴즈 더 풀기 (${QUIZ.length}문항) ›</button>`)}
-      </section>`;
-  };
-  draw();
-  slot.addEventListener('click', e => {
-    const b = e.target.closest('[data-pick]'); if(!b || picked != null) return;
-    picked = opts[+b.dataset.pick];
-    store.set(QDAY, { d:today(), qi:qi, pick:picked });
-    record(picked === q.a, true);
-    draw();
-  });
+
+/* ===================== 공지사항 (이용자 화면) ===================== */
+function fmtDate(v){
+  const d = new Date(v); if(isNaN(d)) return '';
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '.' + p(d.getMonth() + 1) + '.' + p(d.getDate());
 }
-const QS = { cat:'전체', run:null };
-function renderQuiz(){
-  const p = $('#p-quiz'); if(!p) return;
-  const s = stats();
-  const rate = s.total ? Math.round(s.correct / s.total * 100) : 0;
-  const cats = ['전체', '안전', '비상', '촬영', '친환경'];
-  const label = c => c === '비상' ? '비상·응급' : c === '촬영' ? '촬영현장' : c;
-  const cnt = c => c === '전체' ? QUIZ.length : QUIZ.filter(q => q.c === c).length;
-  if(QS.run && QS.run.i >= QS.run.list.length){ renderQuizEnd(p); return; }
-  if(QS.run){ renderQuizStep(p); return; }
-  p.innerHTML = `
-    <div class="page-head"><div><h2 style="margin-top:0">🧠 오늘의 안전·친환경 퀴즈</h2>
-      <p class="muted">안전·비상·촬영·친환경 ${QUIZ.length}문항. 풀면서 수칙을 익혀요.</p></div>${window.U.mascotDuo()}</div>
-    <div class="stats qz-stats">
-      <div class="stat"><b>${s.total}</b><span>푼 문제</span></div>
-      <div class="stat"><b>${s.total ? rate + '%' : '-'}</b><span>정답률</span></div>
-      <div class="stat"><b>${s.streak || 0}</b><span>연속 도전(일)</span></div>
+async function loadNotices(){
+  const box = $('#noticeList'); if(!box) return;
+  if(!SB.configured()){ box.innerHTML = '<p class="muted small">공지사항이 아직 연결되지 않았습니다.</p>'; return; }
+  try{ renderNotices(await SB.listNotices()); }
+  catch(e){ box.innerHTML = '<p class="muted small">공지사항을 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.</p>'; }
+}
+function renderNotices(list){
+  const box = $('#noticeList'); if(!box) return;
+  if(!list.length){ box.innerHTML = '<p class="muted">등록된 공지사항이 없습니다.</p>'; return; }
+  const SHOW = 5;
+  box.innerHTML = list.map((n, i) => `<details class="notice-item${n.pinned ? ' pinned' : ''}"${i === 0 ? ' open' : ''}${i >= SHOW ? ' data-more hidden' : ''}>
+      <summary><span class="n-title">${n.pinned ? '<span class="npin">📌 고정</span>' : ''}${esc(n.title)}</span><span class="n-date">${esc(fmtDate(n.createdAt))}</span></summary>
+      <div class="n-body">${esc(n.body) || '<span class="muted">(내용 없음)</span>'}</div></details>`).join('')
+    + (list.length > SHOW ? `<button class="btn ghost block" type="button" id="noticeMore">이전 공지 더 보기 (${list.length - SHOW}건)</button>` : '');
+  const more = $('#noticeMore');
+  if(more) more.addEventListener('click', () => { $$('#noticeList [data-more]').forEach(d => d.hidden = false); more.remove(); });
+}
+
+/* ===================== 안전수칙 ===================== */
+function accordion(item, open, noArt){
+  const lists = [];
+  if(item.art === 'eco' && !noArt) lists.push(window.U.mascotEco());
+  if(item.intro) lists.push(`<p>${item.intro}</p>`);
+  if(item.do) lists.push(`<div class="lbl ok">이렇게 해요</div><ul class="ul ok">${item.do.map(x => `<li>${x}</li>`).join('')}</ul>`);
+  if(item.dont) lists.push(`<div class="lbl no">하지 않아요</div><ul class="ul no">${item.dont.map(x => `<li>${x}</li>`).join('')}</ul>`);
+  if(item.steps) lists.push(`<ol class="steps">${item.steps.map(x => `<li>${x}</li>`).join('')}</ol>`);
+  if(item.note) lists.push(`<p class="note">${item.note}</p>`);
+  return `<details class="acc"${open?' open':''}><summary><span class="acc-ic">${item.icon}</span><span>${item.title}</span></summary><div class="acc-body">${lists.join('')}</div></details>`;
+}
+function renderRules(){
+  $('#p-rules').innerHTML = `
+    <div class="page-head">
+      <div>
+        <h2 style="margin-top:0">안전수칙</h2>
+        <p class="muted">분야를 눌러 자세한 수칙을 확인하세요.</p>
+      </div>
+      ${window.U.mascotDuo()}
     </div>
     <div class="card">
-      <h3>5문제 도전</h3>
-      <p class="muted small">분야를 고르고 시작하세요. 문제는 무작위로 나옵니다.</p>
-      <div class="chips" id="qzCats">${cats.map(c => `<label class="chip"><input type="radio" name="qzc" value="${c}"${QS.cat === c ? ' checked' : ''}><span>${label(c)} (${cnt(c)})</span></label>`).join('')}</div>
-      <button class="btn primary block" type="button" id="qzStart" style="margin-top:12px">시작하기</button>
+      <h3>✅ 내 자리 안전 셀프체크</h3>
+      <p class="muted small">해당하는 항목을 눌러 보세요. (저장되지 않습니다)</p>
+      <div id="selfchk">${SELFCHECK.map((t,i) => `<label class="chk"><input type="checkbox" data-i="${i}"><span>${esc(t)}</span></label>`).join('')}</div>
+      <div class="score"><span id="scoreTxt">0 / ${SELFCHECK.length}</span><div class="bar"><i id="scoreBar"></i></div></div>
+      <p class="note" id="scoreMsg" style="margin-top:10px">체크하지 못한 항목은 오늘 바로 개선해 보세요.</p>
     </div>
-    <div id="qzToday"></div>
-    <p class="muted small">정답과 기록은 이 기기의 브라우저에만 저장됩니다.</p>`;
-  $('#qzCats').addEventListener('change', e => { QS.cat = e.target.value; });
-  $('#qzStart').addEventListener('click', () => {
-    const pool = QUIZ.map((q, i) => i).filter(i => QS.cat === '전체' || QUIZ[i].c === QS.cat);
-    const pick = shuffled(pool, Math.random).slice(0, 5);
-    QS.run = { list:pick, i:0, score:0, picked:null, opts:null };
-    renderQuiz(); window.scrollTo({ top:0 });
+    ${RULES.map((r,i) => accordion(r, i===0)).join('')}`;
+  $('#selfchk').addEventListener('change', () => {
+    const n = $$('#selfchk input:checked').length, tot = SELFCHECK.length;
+    $('#scoreTxt').textContent = n + ' / ' + tot;
+    $('#scoreBar').style.width = (n / tot * 100) + '%';
+    $('#scoreMsg').textContent = n === tot ? '훌륭해요! 안전한 자리를 만들고 계십니다. 🎉' : '체크하지 못한 항목은 오늘 바로 개선해 보세요.';
   });
-  const slot = $('#qzToday');
-  const qi = dailyIndex(), q = QUIZ[qi];
-  const saved = store.get(QDAY, null);
-  if(saved && saved.d === today() && saved.qi === qi){
-    const opts = optionsOf(q, seededRand(qi * 7919 + dayNum()));
-    slot.innerHTML = `<section class="card quiz-card"><h3>오늘의 문제 다시 보기</h3>${qCard(q, opts, saved.pick)}</section>`;
+}
+
+/* ===================== 비상대응 ===================== */
+function renderEmergency(){
+  $('#p-emergency').innerHTML = `
+    <div class="page-head">
+      <div>
+        <h2 style="margin-top:0">비상대응</h2>
+        <p class="muted">급박한 위험이라면 이 페이지에서 제보하지 말고 <b>먼저 전화</b>하세요.</p>
+      </div>
+      ${window.U.mascotDuo()}
+    </div>
+    <div class="card">
+      <h3>📞 긴급 연락처</h3>
+      ${CONFIG.contacts.map(c => `
+        <div class="contact">
+          <div><b>${esc(c.label)}</b><span class="num">${esc(c.number)}</span></div>
+          ${c.tel ? `<a class="callbtn" href="tel:${esc(c.tel)}">전화</a>` : ''}
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <h3>📍 우리 사무실 비상 정보</h3>
+      <div class="facts">
+        <div class="fact"><b>비상 집결지</b><span>${esc(CONFIG.assemblyPoint)}</span></div>
+        <div class="fact"><b>소화기</b><span>${esc(CONFIG.extinguisherLoc)}</span></div>
+        <div class="fact"><b>AED</b><span>${esc(CONFIG.aedLoc)}</span></div>
+      </div>
+    </div>
+    ${EMERGENCY.map((e,i) => accordion(e, i===0)).join('')}`;
+}
+
+/* ===================== 안전신문고 (제보 폼) ===================== */
+const form = { photos:[], busy:false, processing:false };
+
+/* ----- 접수번호로 처리 결과 조회 (제보자용: 상태와 공개된 처리 결과만 보여 줍니다) ----- */
+function lookupCardHtml(){
+  return `<details class="card lookup" id="lkBox">
+      <summary>🔎 접수번호로 처리 결과 조회</summary>
+      <div class="lk-body">
+        <p class="muted small">제보할 때 받은 접수번호(예: SF-261008-AB12C)를 입력하면 처리 상태와 공개된 처리 결과를 볼 수 있어요. 익명으로 제보했어도 조회됩니다.</p>
+        <div class="lk-row">
+          <input id="lkId" class="input" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="20" placeholder="SF-YYMMDD-XXXXX" aria-label="접수번호">
+          <button class="btn primary" type="button" id="lkBtn">조회</button>
+        </div>
+        <div id="lkRes" aria-live="polite"></div>
+      </div>
+    </details>`;
+}
+const LK_RE = /^SF-[0-9]{6}-[0-9A-F]{5}$/;
+const LK_STEPS = ['접수', '검토중', '조치완료'];
+function lookupResultHtml(r){
+  const at = LK_STEPS.indexOf(r.status);
+  const cls = r.status === '조치완료' ? 'b-done' : r.status === '검토중' ? 'b-wip' : 'b-new';
+  const msg = r.status === '조치완료' ? '조치가 완료되었습니다.' : r.status === '검토중' ? '담당자가 내용을 검토하고 있습니다.' : '제보가 접수되었습니다. 곧 담당자가 확인합니다.';
+  return `<div class="lk-card">
+      <div class="lk-top"><span class="badge ${cls}">${esc(r.status)}</span><b>${esc(r.id)}</b></div>
+      <ol class="lk-steps" aria-label="처리 단계">${LK_STEPS.map((s, i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}"><i>${i < at || (i === at && at === 2) ? '✓' : i + 1}</i><span>${s}</span></li>`).join('')}</ol>
+      <p>${msg}</p>
+      <dl class="kv"><dt>유형</dt><dd>${esc(r.category)}</dd><dt>접수일</dt><dd>${esc(fmtDate(r.createdAt))}</dd><dt>최근 처리일</dt><dd>${esc(fmtDate(r.updatedAt))}</dd></dl>
+      <div class="lk-reply"><b>📝 처리 결과</b><p>${r.reply ? esc(r.reply) : '<span class="muted">아직 공개된 처리 결과가 없습니다. 처리 결과가 등록되면 이곳에 안내됩니다.</span>'}</p></div>
+    </div>`;
+}
+async function doLookup(){
+  const box = $('#lkRes'), btn = $('#lkBtn'); if(!box) return;
+  const id = $('#lkId').value.trim().toUpperCase().replace(/\s+/g, '');
+  $('#lkId').value = id;
+  if(!LK_RE.test(id)){ box.innerHTML = '<p class="err">접수번호는 SF-날짜6자리-5자리(영문 A~F·숫자) 형식입니다. 예: SF-261008-AB12C</p>'; return; }
+  if(!SB.configured()){ box.innerHTML = '<p class="err">서버 연결 설정이 아직 되지 않았습니다. 관리자에게 문의해 주세요.</p>'; return; }
+  btn.disabled = true; box.innerHTML = '<p class="muted small">조회 중…</p>';
+  try{
+    const r = await SB.lookupReport(id);
+    box.innerHTML = r ? lookupResultHtml(r) : '<p class="err">해당 접수번호를 찾을 수 없습니다. 번호를 다시 확인해 주세요. (삭제된 제보는 조회되지 않습니다)</p>';
+  }catch(e){ box.innerHTML = '<p class="err">' + esc(e.message || '조회하지 못했습니다.') + '</p>'; }
+  btn.disabled = false;
+}
+function bindLookup(){
+  const b = $('#lkBtn'); if(!b) return;
+  b.addEventListener('click', doLookup);
+  $('#lkId').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); doLookup(); } });
+}
+function openLookup(id){
+  const box = $('#lkBox'); if(!box) return;
+  box.open = true; if(id) $('#lkId').value = id;
+  box.scrollIntoView({ behavior:'smooth', block:'start' });
+  if(id) doLookup();
+}
+
+function renderReport(){
+  const placeOpts = CONFIG.places.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  $('#p-report').innerHTML = `
+    <div class="page-head">
+      <div>
+        <h2 style="margin-top:0">📣 안전신문고</h2>
+        <p class="muted">아차사고, 사고, 위험요소, 개선 아이디어를 자유롭게 알려주세요. 근로자 · 수급업체 · 고객 누구나 제보할 수 있고, <b>이름 없이 익명</b>으로도 가능합니다.</p>
+      </div>
+      ${window.U.mascotDuo()}
+    </div>
+    ${lookupCardHtml()}
+    <div id="rBanner"></div>
+    <div id="rWrap" class="stack" style="gap:18px">
+      <div class="banner danger"><span>🚨</span><div><b>생명·신체에 급박한 위험이 있나요?</b>이 제보보다 먼저 <a href="tel:119" style="color:inherit">119</a> 또는 비상연락처로 연락해 주세요.</div></div>
+
+      <div class="field"><span class="lab">제보하시는 분 <span class="req">*</span></span>
+        <div class="chips">
+          ${['사내 근로자','수급업체 근로자','고객 · 방문자','기타'].map(v => `<label class="chip"><input type="radio" name="rtype" value="${v}"><span>${v}</span></label>`).join('')}
+        </div></div>
+
+      <div class="field"><span class="lab">제보 유형 <span class="req">*</span></span>
+        <div class="chips">
+          ${['아차사고','안전사고','위험요소 발견','개선 제안'].map(v => `<label class="chip"><input type="radio" name="cat" value="${v}"><span>${v}</span></label>`).join('')}
+        </div>
+        <span class="hint">아차사고: 다치진 않았지만 사고가 날 뻔한 일</span></div>
+
+      <div class="field"><span class="lab">위험 정도 <span class="req">*</span></span>
+        <div class="chips">
+          ${[['낮음',''],['보통',''],['높음','sev-h']].map(a => `<label class="chip ${a[1]}"><input type="radio" name="sev" value="${a[0]}"><span>${a[0]}${a[0]==='높음'?' (즉시 조치 필요)':''}</span></label>`).join('')}
+        </div></div>
+
+      <div class="field"><label for="fPlace">장소 <span class="req">*</span></label>
+        <select id="fPlace" class="input"><option value="">장소를 선택하세요</option>${placeOpts}</select>
+        <input id="fPlaceDetail" class="input" type="text" maxlength="80" placeholder="상세 위치 (예: 3층 엘리베이터 앞)"></div>
+
+      <div class="field"><label for="fWhen">발생 · 발견 일시 <span class="req">*</span></label>
+        <input id="fWhen" class="input" type="datetime-local"></div>
+
+      <div class="field"><label for="fContent">내용 <span class="req">*</span></label>
+        <textarea id="fContent" class="input" maxlength="1000" placeholder="어떤 일이 있었나요? 어떤 점이 위험하다고 느끼셨나요? 어떻게 개선하면 좋을지도 알려주세요."></textarea>
+        <span class="hint" id="cnt">0 / 1000</span></div>
+
+      <div class="field"><span class="lab">사진 첨부 <span class="muted" style="font-weight:400">(선택, 최대 ${MAX_PHOTOS}장)</span></span>
+        <div class="photos-actions">
+          <button class="btn ghost" type="button" id="btnCam">📷 사진 촬영</button>
+          <button class="btn ghost" type="button" id="btnAlbum">🖼️ 앨범에서 선택</button>
+        </div>
+        <input type="file" id="fCam" accept="image/*" capture="environment" hidden>
+        <input type="file" id="fAlbum" accept="image/*" multiple hidden>
+        <div class="thumbs" id="thumbs"></div>
+        <span class="hint" id="photoHint">얼굴·차량번호·개인정보 등이 찍히지 않도록 주의해 주세요. 사진은 자동으로 압축되며 위치정보(GPS)는 제거됩니다. 사진은 접수 후 30일이 지나면 자동으로 삭제됩니다.</span></div>
+
+      <div class="field">
+        <label class="chk" style="border:0;padding:0"><input type="checkbox" id="fWantReply"><span>처리 결과를 받고 싶어요 (연락처 남기기, 선택)</span></label>
+        <div id="contactBox" class="field" hidden style="gap:10px">
+          <input id="fName" class="input" type="text" maxlength="30" placeholder="이름">
+          <input id="fContact" class="input" type="text" maxlength="60" placeholder="연락처 (전화번호 또는 이메일)">
+          <label class="chk" style="border:0;padding:0"><input type="checkbox" id="fConsent"><span class="small">개인정보 수집·이용에 동의합니다.<br><span class="muted">${esc(CONFIG.privacyNotice)}</span></span></label>
+        </div>
+        <span class="hint">연락처를 남기지 않으면 완전한 익명으로 접수됩니다.</span>
+      </div>
+
+      <div class="honey" aria-hidden="true"><label>웹사이트<input id="fWebsite" type="text" tabindex="-1" autocomplete="off"></label></div>
+      <div class="err" id="rErr" role="alert"></div>
+      <button class="btn primary block" type="button" id="btnSubmit">제보 접수하기</button>
+    </div>
+    <div id="rDone" class="card" hidden></div>`;
+
+  bindLookup();
+  $('#fWhen').value = nowLocal(); $('#fWhen').max = nowLocal();
+  $('#fContent').addEventListener('input', e => { $('#cnt').textContent = e.target.value.length + ' / 1000'; });
+  $('#fWantReply').addEventListener('change', e => { $('#contactBox').hidden = !e.target.checked; });
+  $('#btnCam').addEventListener('click', () => $('#fCam').click());
+  $('#btnAlbum').addEventListener('click', () => $('#fAlbum').click());
+  $('#fCam').addEventListener('change', onPickFiles);
+  $('#fAlbum').addEventListener('change', onPickFiles);
+  $('#thumbs').addEventListener('click', e => {
+    const rm = e.target.closest('[data-rm]');
+    if(rm){ form.photos.splice(+rm.dataset.rm, 1); renderThumbs(); return; }
+    const im = e.target.closest('img'); if(im) openLightbox(im.src);
+  });
+  $('#btnSubmit').addEventListener('click', submitReport);
+  if(!SB.configured()){
+    $('#rBanner').innerHTML = '<div class="banner warn"><span>⚙️</span><div><b>서버 연결 설정이 아직 되지 않았습니다.</b>관리자는 README의 3~4단계를 완료해 주세요. (site.config.js의 SUPABASE_URL · SUPABASE_ANON_KEY)</div></div>';
+    $('#btnSubmit').disabled = true;
   }
 }
-function renderQuizStep(p){
-  const r = QS.run, q = QUIZ[r.list[r.i]];
-  if(!r.opts) r.opts = optionsOf(q, Math.random);
-  p.innerHTML = `
-    <div class="page-head"><div><h2 style="margin-top:0">🧠 퀴즈 ${r.i + 1} / ${r.list.length}</h2>
-      <div class="bar" aria-hidden="true"><i style="width:${(r.i / r.list.length) * 100}%"></i></div></div></div>
-    <section class="card quiz-card">${qCard(q, r.opts, r.picked, r.picked != null ? `<button class="btn primary block" type="button" id="qzNext" style="margin-top:12px">${r.i + 1 >= r.list.length ? '결과 보기' : '다음 문제'}</button>` : '')}</section>
-    <button class="btn ghost block" type="button" id="qzStop">그만하기</button>`;
-  $('#qzStop').addEventListener('click', () => { QS.run = null; renderQuiz(); });
-  p.querySelector('.qz-opts').addEventListener('click', e => {
-    const b = e.target.closest('[data-pick]'); if(!b || r.picked != null) return;
-    r.picked = r.opts[+b.dataset.pick];
-    const ok = r.picked === q.a; if(ok) r.score++;
-    record(ok, false);
-    renderQuiz();
-  });
-  const nx = $('#qzNext'); if(nx) nx.addEventListener('click', () => { r.i++; r.picked = null; r.opts = null; renderQuiz(); window.scrollTo({ top:0 }); });
+
+async function onPickFiles(e){
+  const files = Array.from(e.target.files || []); e.target.value = '';
+  if(!files.length) return;
+  const room = MAX_PHOTOS - form.photos.length;
+  if(room <= 0){ toast('사진은 최대 ' + MAX_PHOTOS + '장까지 첨부할 수 있어요.'); return; }
+  form.processing = true; $('#photoHint').textContent = '사진을 처리하는 중…';
+  let failed = 0;
+  for(const f of files.slice(0, room)){
+    try{ form.photos.push({ data: await fileToJpeg(f) }); renderThumbs(); }
+    catch(err){ failed++; }
+  }
+  form.processing = false;
+  $('#photoHint').textContent = failed ? '일부 사진을 불러오지 못했습니다. 다른 사진을 선택해 주세요.' : '얼굴·차량번호·개인정보 등이 찍히지 않도록 주의해 주세요. 사진은 자동으로 압축됩니다.';
+  if(files.length > room) toast('사진은 최대 ' + MAX_PHOTOS + '장까지만 담았어요.');
 }
-function renderQuizEnd(p){
-  const r = QS.run, n = r.list.length;
-  const msg = r.score === n ? '완벽해요! 안전·환경 박사님이에요. 🏆' : r.score >= n - 1 ? '아주 잘했어요! 👏' : r.score >= Math.ceil(n / 2) ? '좋아요! 조금만 더 익혀 볼까요? 💪' : '괜찮아요! 해설을 읽고 다시 도전해 보세요. 🌱';
-  p.innerHTML = `
-    <div class="card success"><div class="ok-ic">🧠</div><h2 style="margin:0">${r.score} / ${n} 정답</h2><p class="muted">${msg}</p>
+async function fileToJpeg(file){
+  const url = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('img')); i.src = url; });
+    let maxDim = 1280, q = 0.72;
+    for(let n=0; n<8; n++){
+      const sc = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * sc)), h = Math.max(1, Math.round(img.naturalHeight * sc));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,h); ctx.drawImage(img, 0, 0, w, h);
+      const data = c.toDataURL('image/jpeg', q);
+      if(data.length <= MAX_PHOTO_CHARS && JPEG_RE.test(data)) return data;
+      if(q > 0.5) q -= 0.1; else maxDim = Math.round(maxDim * 0.8);
+    }
+    throw new Error('too big');
+  } finally { URL.revokeObjectURL(url); }
+}
+function renderThumbs(){
+  $('#thumbs').innerHTML = form.photos.map((p,i) =>
+    `<div class="thumb"><img src="${p.data}" alt="첨부 사진 ${i+1}"><button type="button" data-rm="${i}" aria-label="사진 ${i+1} 삭제">×</button></div>`).join('');
+}
+
+function val(name){ const c = $('input[name="' + name + '"]:checked'); return c ? c.value : ''; }
+async function submitReport(){
+  if(form.busy) return;
+  const err = $('#rErr'); err.textContent = '';
+  const fail = m => { err.textContent = m; err.scrollIntoView({ block:'center', behavior:'smooth' }); };
+  const rtype = val('rtype'), cat = val('cat'), sev = val('sev');
+  const place = $('#fPlace').value, detail = $('#fPlaceDetail').value.trim();
+  const when = $('#fWhen').value, content = $('#fContent').value.trim();
+  const wantReply = $('#fWantReply').checked;
+  const name = $('#fName').value.trim(), contact = $('#fContact').value.trim();
+  if(!rtype) return fail('제보하시는 분을 선택해 주세요.');
+  if(!cat) return fail('제보 유형을 선택해 주세요.');
+  if(!sev) return fail('위험 정도를 선택해 주세요.');
+  if(!place) return fail('장소를 선택해 주세요.');
+  if(!when) return fail('발생·발견 일시를 입력해 주세요.');
+  if(content.length < 10) return fail('내용을 10자 이상 적어 주세요.');
+  if(wantReply){
+    if(!contact) return fail('회신받을 연락처를 입력하거나, 체크를 해제해 주세요.');
+    if(!$('#fConsent').checked) return fail('연락처를 남기시려면 개인정보 수집·이용에 동의해 주세요.');
+  }
+  if(form.processing) return fail('사진을 처리하는 중입니다. 잠시 후 다시 눌러 주세요.');
+
+  /* 같은 브라우저에서 1시간에 5건까지 (간단한 도배 방지) */
+  let recent = [];
+  try{ recent = JSON.parse(localStorage.getItem('safety_recent') || '[]').filter(t => Date.now() - t < 3600000); }catch(e){}
+  if(recent.length >= 5) return fail('짧은 시간에 너무 많이 제출했습니다. 잠시 후 다시 시도해 주세요.');
+
+  form.busy = true; const btn = $('#btnSubmit'); btn.disabled = true; btn.textContent = '접수 중…';
+  try{
+    if($('#fWebsite').value){ showDone(newId(), 0); return; }          /* 봇 차단(숨김 입력란): 성공한 척 무시 */
+    const body = {
+      occurred_at:when, reporter_type:rtype, category:cat, severity:sev, place:place, place_detail:detail, content:content,
+      photo_count:form.photos.length, anonymous:!wantReply,
+      contact_name: wantReply ? name : '', contact_info: wantReply ? contact : ''
+    };
+    let id = '', saved = false;
+    for(let i = 0; i < 3 && !saved; i++){
+      id = newId();
+      try{ await SB.insertReport(Object.assign({ id:id }, body)); saved = true; }
+      catch(e){ if(e.code !== '23505' || i === 2) throw e; }          /* 접수번호 중복이면 새 번호로 재시도 */
+    }
+    let photoFailed = 0;
+    for(let i = 0; i < form.photos.length; i++){
+      try{ await SB.uploadPhoto(id, i, dataUrlToBlob(form.photos[i].data)); }catch(e){ photoFailed++; }
+    }
+    try{ recent.push(Date.now()); localStorage.setItem('safety_recent', JSON.stringify(recent)); }catch(e){}
+    showDone(id, photoFailed);
+  }catch(e){
+    err.textContent = e.status === 0 ? e.message
+      : /RATE_LIMIT/.test(e.message || '') ? '지금 접수가 몰려 있습니다. 잠시 후 다시 시도해 주세요.'
+      : e.status === 400 ? '입력 내용을 다시 확인해 주세요.'
+      : '접수 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.';
+  }finally{
+    form.busy = false; btn.disabled = !SB.configured(); btn.textContent = '제보 접수하기';
+  }
+}
+function newId(){
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const r = Array.from(crypto.getRandomValues(new Uint8Array(3))).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase().slice(0, 5);
+  return 'SF-' + String(d.getFullYear()).slice(2) + p(d.getMonth() + 1) + p(d.getDate()) + '-' + r;
+}
+function dataUrlToBlob(u){
+  const bin = atob(u.split(',')[1]); const arr = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type:'image/jpeg' });
+}
+function showDone(id, photoFailed){
+  $('#rWrap').hidden = true;
+  const d = $('#rDone'); d.hidden = false;
+  d.innerHTML = `<div class="success">
+      <div class="ok-ic">✓</div>
+      <h2 style="margin:0">제보가 접수되었습니다</h2>
+      <p class="muted">소중한 의견 감사합니다. 담당자가 확인 후 조치합니다.</p>
+      <div class="rid">${esc(id)}</div>
+      <p class="hint">접수번호를 꼭 기록해 두세요. 나중에 <b>처리 결과 조회</b>에서 처리 상태와 결과를 확인할 수 있습니다. 사진은 접수 후 30일이 지나면 자동으로 삭제됩니다.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
-        <button class="btn primary" type="button" id="qzAgain">다시 도전</button>
-        <button class="btn ghost" type="button" id="qzBack">퀴즈 홈</button>
-        <button class="btn ghost" type="button" data-go="rules">안전수칙 보기</button>
-      </div></div>`;
-  $('#qzAgain').addEventListener('click', () => {
-    const pool = QUIZ.map((q, i) => i).filter(i => QS.cat === '전체' || QUIZ[i].c === QS.cat);
-    QS.run = { list:shuffled(pool, Math.random).slice(0, 5), i:0, score:0, picked:null, opts:null }; renderQuiz();
+        <button class="btn ghost" type="button" id="btnCopyId">접수번호 복사</button>
+        <button class="btn ghost" type="button" id="btnLookupNow">처리 결과 조회</button>
+      </div>
+      ${photoFailed ? `<div class="banner warn"><span>⚠️</span><div>사진 ${photoFailed}장은 저장하지 못했습니다. 필요하면 다시 제보해 주세요.</div></div>` : ''}
+      <button class="btn primary" type="button" id="btnAgain">새 제보 작성하기</button>
+    </div>`;
+  $('#btnAgain').addEventListener('click', () => { form.photos = []; renderReport(); window.scrollTo({ top:0 }); });
+  $('#btnCopyId').addEventListener('click', () => {
+    const ok = () => toast('접수번호를 복사했습니다.');
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(id).then(ok).catch(() => window.prompt('접수번호를 복사하세요', id));
+    else window.prompt('접수번호를 복사하세요', id);
   });
-  $('#qzBack').addEventListener('click', () => { QS.run = null; renderQuiz(); });
+  $('#btnLookupNow').addEventListener('click', () => openLookup(id));
+  window.scrollTo({ top:0, behavior:'smooth' });
 }
+function openLightbox(src){
+  if(!/^data:image\/jpeg;base64,/.test(src)) return;
+  const d = document.createElement('div'); d.className = 'lightbox';
+  const im = document.createElement('img'); im.src = src; im.alt = '확대한 사진';
+  d.appendChild(im); d.addEventListener('click', () => d.remove());
+  document.body.appendChild(d);
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape'){ const lb = $('.lightbox'); if(lb) lb.remove(); } });
 
-/* ===================== 4) 이달의 안전·친환경 캠페인 ===================== */
-function campaignDefaults(){
-  const m = month();
-  const sc = (C.SAFETY_CAMPAIGNS || []).find(x => x.m === m) || null;
-  const ec = (C.ECO_CHALLENGES || []).find(x => x.m === m) || null;
-  return { month:m, safety:sc, eco:ec };
-}
-E.campaignDefaults = campaignDefaults;
-function campaignHtml(d, ov){
-  const sTitle = (ov && ov.safetyTitle) || (d.safety && d.safety.title) || '';
-  const sBody  = (ov && ov.safetyTitle ? ov.safetyBody : (d.safety && d.safety.body)) || '';
-  const eTitle = (ov && ov.ecoTitle) || (d.eco && (d.eco.icon + ' ' + d.eco.title)) || '';
-  const eBody  = (ov && ov.ecoTitle ? ov.ecoBody : (d.eco && d.eco.desc)) || '';
-  const sGo = (d.safety && d.safety.go) || 'rules';
-  return `<section class="card camp-card" aria-label="이달의 안전·친환경 캠페인">
-      <div class="camp-head"><h2>📅 이달의 안전·친환경 캠페인</h2><span class="camp-month">${d.month}월</span></div>
-      ${sTitle ? `<div class="camp-row safe"><span class="camp-pill">안전</span><div><b>${esc(sTitle)}</b><p>${esc(sBody)}</p><button class="camp-go" type="button" data-go="${esc(sGo)}">관련 수칙 보기 ›</button></div></div>` : ''}
-      ${eTitle ? `<div class="camp-row eco"><span class="camp-pill">친환경</span><div><b>${esc(eTitle)}</b><p>${esc(eBody)}</p><button class="camp-go" type="button" data-go="eco">챌린지 참여하기 ›</button></div></div>` : ''}
-    </section>`;
-}
-function mountCampaign(){
-  const slot = $('#campSlot'); if(!slot) return;
-  const d = campaignDefaults();
-  slot.innerHTML = campaignHtml(d, null);
-  const SB = window.SB;
-  if(SB && SB.configured && SB.configured() && SB.getCampaign){
-    SB.getCampaign().then(c => {
-      if(c && c.ym === ym() && (c.safetyTitle || c.ecoTitle)){ const s = $('#campSlot'); if(s) s.innerHTML = campaignHtml(d, c); }
-    }).catch(() => {});
-  }
-}
-
-/* ===================== 5) 이달의 친환경 실천 챌린지 (친환경 화면) ===================== */
-function mountChallenge(){
-  const slot = $('#ecoChallenge'); if(!slot) return;
-  const list = C.ECO_CHALLENGES || []; if(!list.length) return;
-  const m = month(), cur = list.find(x => x.m === m) || list[0];
-  const next = list.find(x => x.m === (m % 12) + 1);
-  const key = 'eco_ch_' + ym();
-  const done = new Set(store.get(key, []));
-  const draw = () => {
-    const n = cur.actions.filter((_, i) => done.has(i)).length, all = n === cur.actions.length;
-    slot.innerHTML = `<section class="card eco-ch${all ? ' all' : ''}" aria-label="이달의 친환경 실천 챌린지">
-        <div class="camp-head"><h3>🌿 이달의 친환경 실천 챌린지</h3><span class="camp-month">${m}월</span></div>
-        <div class="eco-ch-title"><span class="eco-ch-ic" aria-hidden="true">${cur.icon}</span><div><b>${esc(cur.title)}</b><p class="muted small">${esc(cur.desc)}</p></div></div>
-        <div id="ecoChList">${cur.actions.map((a, i) => `<label class="chk"><input type="checkbox" data-i="${i}"${done.has(i) ? ' checked' : ''}><span>${esc(a)}</span></label>`).join('')}</div>
-        <div class="score"><span>${n} / ${cur.actions.length} 실천</span><div class="bar"><i style="width:${n / cur.actions.length * 100}%"></i></div></div>
-        <p class="note" style="margin-top:10px">${all ? '🎉 이달의 챌린지를 모두 실천했어요! 정말 멋져요.' : '오늘 할 수 있는 것부터 하나씩 체크해 보세요. (이 기기에만 저장됩니다)'}</p>
-        ${next ? `<p class="muted small" style="margin-top:8px">다음 달 챌린지: ${next.icon} ${esc(next.title)}</p>` : ''}
-        <details class="acc" style="margin-top:10px"><summary><span class="acc-ic">🗓</span><span>12개월 챌린지 한눈에 보기</span></summary>
-          <div class="acc-body"><ul class="ul ok">${list.map(c => `<li${c.m === m ? ' style="font-weight:700"' : ''}>${c.m}월 · ${c.icon} ${esc(c.title)}</li>`).join('')}</ul></div></details>
-      </section>`;
-  };
-  draw();
-  slot.addEventListener('change', e => {
-    const cb = e.target.closest('input[data-i]'); if(!cb) return;
-    const i = +cb.dataset.i; if(cb.checked) done.add(i); else done.delete(i);
-    store.set(key, Array.from(done)); draw();
-  });
-}
-
-/* ===================== app.js 와 연결 ===================== */
-E.mountHome = function(){ mountCampaign(); mountQuizCard(); };
-E.mountEco = function(){ mountChallenge(); };
-E.onShow = function(tab){
-  if(tab === 'search') renderSearch();
-  else if(tab === 'quiz') renderQuiz();
-  openPending(tab);
-};
-E.init = function(){
-  a11yApply();
-  const sb = $('#searchBtn'); if(sb) sb.addEventListener('click', () => { location.hash = '#search'; });
-  const ab = $('#a11yBtn'); if(ab) ab.addEventListener('click', openA11y);
-};
-window.Extras = E;
+/* ===================== 시작 ===================== */
+window.U.initTheme();
+$('#orgName').textContent = CONFIG.orgName;
+document.title = (CONFIG.siteTitle || '안전·친환경 지킴이') + ' · ' + CONFIG.orgName;
+const bs = $('#siteSub'); if(bs) bs.textContent = CONFIG.siteTitle || '안전·친환경 지킴이';
+renderHome(); renderMenu(); renderEco(); renderRules(); renderEmergency(); renderReport();
+if(window.Extras){ window.Extras.init(); window.Extras.mountHome(); window.Extras.mountEco(); }
+renderTabs();
+loadWeather();
+loadNotices();
+bindMascots();
 })();
