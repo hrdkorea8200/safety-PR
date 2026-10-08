@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const CONFIG = window.SITE_CONFIG;
-const { TIPS, RULES10, SELFCHECK, RULES, EMERGENCY } = window.CONTENT;
+const { TIPS, RULES10, SELFCHECK, RULES, EMERGENCY, ECO_TOP, ECO_SELFCHECK, ECO } = window.CONTENT;
 const { $, $$, esc, toast, nowLocal } = window.U;
 const SB = window.SB;
 const MAX_PHOTOS = 3;
@@ -20,13 +20,13 @@ const ICONS = {
 };
 /* 화면(페이지) 목록: 주소(#id)로 열 수 있는 모든 화면 */
 const TABS = [
-  { id:'home' }, { id:'menu' }, { id:'rules' }, { id:'emergency' }, { id:'report' }, { id:'shoot' },
+  { id:'home' }, { id:'menu' }, { id:'rules' }, { id:'emergency' }, { id:'report' }, { id:'shoot' }, { id:'eco' },
   { id:'admin', href:'admin.html' }   /* 숫자 암호 입력 화면으로 이동 */
 ];
 /* 하단 메뉴는 3칸만: 홈 / 바로가기 / 안전신문고. 안전수칙·비상대응·촬영안전은 '바로가기'(또는 홈 퀵 메뉴)로 들어가며, 그 화면에서는 '바로가기'가 켜져 있습니다. */
 const BAR = [
   { id:'home',   label:'홈',        on:['home'] },
-  { id:'menu',   label:'바로가기',  on:['menu','rules','emergency','shoot'] },
+  { id:'menu',   label:'바로가기',  on:['menu','rules','emergency','shoot','eco'] },
   { id:'report', label:'안전신문고', on:['report'] }
 ];
 /* 주소 형식: #탭  또는  #탭/세부 (예: #shoot/camera-01) */
@@ -65,30 +65,36 @@ window.addEventListener('hashchange', () => {
 });
 
 /* ===================== 홈 ===================== */
+/* 안전·환경 서비스 바로가기 6칸 (홈과 '바로가기' 화면이 같이 씁니다) */
+function quickTiles(){
+  const t = (go, art, name, label) => `<button class="qtile" type="button" data-go="${go}" aria-label="${label} 바로가기">${art}<b>${name}</b><span>바로가기 ›</span></button>`;
+  return `<nav class="quick" aria-label="안전·환경 서비스 바로가기">
+      ${t('rules', ART.helmet, '안전정보', '안전정보')}
+      ${t('report', ART.bubble, '안전신문고', '안전신문고')}
+      <button class="qtile q-emg" type="button" data-go="emergency" aria-label="비상대응 바로가기">${ART.siren}<b>비상대응</b><span>바로가기 ›</span></button>
+      ${t('shoot', ART.camera, '촬영현장 안전가이드', '촬영현장 안전가이드')}
+      ${t('eco', ART.eco, '친환경', '친환경')}
+      <a class="qtile q-emg" href="tel:119" aria-label="긴급상황 119 전화">${ART.phone}<b>긴급상황 119</b><span>전화 걸기 ›</span></a>
+    </nav>`;
+}
+
 function renderHome(){
   const tip = WX.todayTip(TIPS);
   $('#p-home').innerHTML = `
-    <h1 class="sr-only">${esc(CONFIG.orgName)} 사무실 안전 지킴이</h1>
+    <h1 class="sr-only">${esc(CONFIG.orgName)} ${esc(CONFIG.siteTitle || '안전·환경 지킴이')}</h1>
 
     <div id="wxSlot">${WX.render({ state:'loading', tip:tip })}</div>
 
-    <h2 class="q-title">안전 서비스 바로가기</h2>
-    <nav class="quick" aria-label="안전 서비스 바로가기">
-      <button class="qtile" type="button" data-go="rules" aria-label="안전정보 바로가기">${ART.helmet}<b>안전정보</b><span>바로가기 ›</span></button>
-      <button class="qtile" type="button" data-go="report" aria-label="안전신문고 바로가기">${ART.bubble}<b>안전신문고</b><span>바로가기 ›</span></button>
-      <button class="qtile q-emg" type="button" data-go="emergency" aria-label="비상대응 바로가기">${ART.siren}<b>비상대응</b><span>바로가기 ›</span></button>
-    </nav>
-    <button class="qwide" type="button" data-go="shoot" aria-label="촬영현장 안전가이드 바로가기">${ART.camera}<span class="qw-txt"><b>촬영현장 안전가이드</b><span>카메라 · 드론 · 조명 등 장비별 안전 수칙</span></span><i aria-hidden="true">›</i></button>
-    <a class="btn ghost block" href="tel:119">🚨 긴급 상황이면 119 전화</a>
-
     <section class="card notice-card" aria-label="공지사항">
       <div class="notice-head">
-        <div><h2>📢 공지사항</h2><p class="muted small">안전과 관련한 소식을 알려 드립니다.</p></div>
+        <div><h2>📢 공지사항</h2><p class="muted small">안전·환경과 관련한 소식을 알려 드립니다.</p></div>
         <div class="mascot-wrap"><img class="mascot" src="./mascot.png" alt="확성기로 안내하는 한국산업인력공단 캐릭터" width="112" height="88"></div>
       </div>
       <div id="noticeList" class="notice-list"><p class="muted small">불러오는 중…</p></div>
     </section>
 
+    <h2 class="q-title">안전·환경 서비스 바로가기</h2>
+    ${quickTiles()}
     <h2>아차사고, 왜 중요할까요?</h2>
     <div class="card">
       <p><b>아차사고</b>란 사고로 이어질 뻔했지만 다행히 다치거나 피해가 없었던 상황입니다. 하인리히 법칙(1:29:300)으로 널리 알려진 것처럼, 큰 사고 뒤에는 수많은 작은 징후가 있습니다.</p>
@@ -110,18 +116,56 @@ function renderMenu(){
     <div class="page-head">
       <div>
         <h2 style="margin-top:0">바로가기</h2>
-        <p class="muted">필요한 안전 정보를 골라 보세요.</p>
+        <p class="muted">필요한 안전·환경 정보를 골라 보세요.</p>
       </div>
       ${window.U.mascotDuo()}
     </div>
-    <nav class="quick" aria-label="안전 서비스 바로가기">
-      <button class="qtile" type="button" data-go="rules" aria-label="안전정보 바로가기">${ART.helmet}<b>안전정보</b><span>사무실 안전수칙</span></button>
-      <button class="qtile q-emg" type="button" data-go="emergency" aria-label="비상대응 바로가기">${ART.siren}<b>비상대응</b><span>연락처 · 대피</span></button>
-      <button class="qtile" type="button" data-go="shoot" aria-label="촬영현장 안전가이드 바로가기">${ART.camera}<b>촬영안전</b><span>장비별 수칙</span></button>
-    </nav>
-    <button class="qwide" type="button" data-go="report" aria-label="안전신문고 바로가기">${ART.bubble}<span class="qw-txt"><b>안전신문고</b><span>아차사고 · 위험요소를 사진과 함께 제보</span></span><i aria-hidden="true">›</i></button>
-    <a class="btn ghost block" href="tel:119">🚨 긴급 상황이면 119 전화</a>
+    ${quickTiles()}
     <button class="btn ghost block" type="button" data-go="admin">🔒 관리자 (제보 확인 · 공지 관리)</button>`;
+}
+
+/* ===================== 친환경 (사무실 · 홍보물 · 행사 + 촬영현장 안내 연결) ===================== */
+function renderEco(){
+  $('#p-eco').innerHTML = `
+    <div class="page-head">
+      <div>
+        <h2 style="margin-top:0">🌱 친환경</h2>
+        <p class="muted">에너지를 아끼고 쓰레기를 줄이는 작은 습관이 더 안전한 일터와 깨끗한 환경을 함께 만듭니다.</p>
+      </div>
+      ${window.U.mascotEco(true)}
+    </div>
+
+    <h2>친환경 실천 8가지</h2>
+    <ol class="rules10">${ECO_TOP.map(r => `<li>${esc(r)}</li>`).join('')}</ol>
+
+    <div class="card">
+      <h3>✅ 내 자리 친환경 셀프체크</h3>
+      <p class="muted small">해당하는 항목을 눌러 보세요. (저장되지 않습니다)</p>
+      <div id="ecoChk">${ECO_SELFCHECK.map((t,i) => `<label class="chk"><input type="checkbox" data-i="${i}"><span>${esc(t)}</span></label>`).join('')}</div>
+      <div class="score"><span id="ecoScoreTxt">0 / ${ECO_SELFCHECK.length}</span><div class="bar"><i id="ecoScoreBar"></i></div></div>
+      <p class="note" id="ecoScoreMsg" style="margin-top:10px">체크하지 못한 항목은 오늘부터 하나씩 실천해 보세요.</p>
+    </div>
+
+    <h2>분야별 친환경 수칙</h2>
+    ${ECO.map((r, i) => accordion(r, i === 0, true)).join('')}
+
+    <div class="card">
+      <h3>🎬 촬영현장 친환경</h3>
+      <p class="muted small">촬영 전·중·후 체크리스트와 배터리·세트 폐기물·야외 자연환경·연기 효과 안내가 있습니다.</p>
+      <a class="btn ghost block" href="#shoot/common" style="margin-top:8px">촬영현장 친환경 수칙 보기</a>
+    </div>
+
+    <div class="card">
+      <h3>💡 친환경 아이디어 · 낭비 신고</h3>
+      <p class="muted small">새는 물, 켜져 있는 조명, 넘치는 쓰레기통, 개선 아이디어를 <b>안전신문고</b>(제보 유형: 위험요소 발견 · 개선 제안)로 알려 주세요.</p>
+      <button class="btn primary block" type="button" data-go="report" style="margin-top:8px">안전신문고로 제안하기</button>
+    </div>`;
+  $('#ecoChk').addEventListener('change', () => {
+    const n = $$('#ecoChk input:checked').length, tot = ECO_SELFCHECK.length;
+    $('#ecoScoreTxt').textContent = n + ' / ' + tot;
+    $('#ecoScoreBar').style.width = (n / tot * 100) + '%';
+    $('#ecoScoreMsg').textContent = n === tot ? '훌륭해요! 지구와 일터를 함께 지키고 계십니다. 🌍' : '체크하지 못한 항목은 오늘부터 하나씩 실천해 보세요.';
+  });
 }
 
 /* ===================== 오늘의 안전 날씨 (이용자 화면) ===================== */
@@ -162,9 +206,9 @@ function renderNotices(list){
 }
 
 /* ===================== 안전수칙 ===================== */
-function accordion(item, open){
+function accordion(item, open, noArt){
   const lists = [];
-  if(item.art === 'eco') lists.push(window.U.mascotEco());
+  if(item.art === 'eco' && !noArt) lists.push(window.U.mascotEco());
   if(item.intro) lists.push(`<p>${item.intro}</p>`);
   if(item.do) lists.push(`<div class="lbl ok">이렇게 해요</div><ul class="ul ok">${item.do.map(x => `<li>${x}</li>`).join('')}</ul>`);
   if(item.dont) lists.push(`<div class="lbl no">하지 않아요</div><ul class="ul no">${item.dont.map(x => `<li>${x}</li>`).join('')}</ul>`);
@@ -445,8 +489,9 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape'){ const lb = $
 /* ===================== 시작 ===================== */
 window.U.initTheme();
 $('#orgName').textContent = CONFIG.orgName;
-document.title = CONFIG.orgName + ' · 사무실 안전 지킴이';
-renderHome(); renderMenu(); renderRules(); renderEmergency(); renderReport(); renderTabs();
+document.title = (CONFIG.siteTitle || '안전·환경 지킴이') + ' · ' + CONFIG.orgName;
+const bs = $('#siteSub'); if(bs) bs.textContent = CONFIG.siteTitle || '안전·환경 지킴이';
+renderHome(); renderMenu(); renderEco(); renderRules(); renderEmergency(); renderReport(); renderTabs();
 loadWeather();
 loadNotices();
 bindMascots();

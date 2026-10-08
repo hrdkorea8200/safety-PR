@@ -34,6 +34,14 @@ window.ART = (function(){
       '<circle cx="32" cy="35" r="12" fill="#fff" ' + S + '/>' +
       '<circle cx="32" cy="35" r="6.5" fill="#00aeef" ' + S + '/>' +
       '<circle cx="49" cy="26" r="2.6" fill="#231f20"/>'),
+    eco: wrap(
+      '<circle cx="32" cy="32" r="23" fill="#00aeef" ' + S + '/>' +
+      '<path d="M16 27c3-7 10-9 14-6 3 2 1 6 3 8 2 3-1 7-6 6-4-1-5-4-8-5-2-1-3-2-3-3z" fill="#8dc63f" stroke="#231f20" stroke-width="2.5" stroke-linejoin="round"/>' +
+      '<path d="M37 38c4-2 9 0 10 4 1 3-2 7-6 7-3 0-5-3-5-6 0-2 0-4 1-5z" fill="#8dc63f" stroke="#231f20" stroke-width="2.5" stroke-linejoin="round"/>' +
+      '<path d="M40 14c-3 6-1 10 4 11" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>'),
+    phone: wrap(
+      '<circle cx="32" cy="32" r="24" fill="#fff" ' + S + '/>' +
+      '<path d="M22 17c-2 0-5 3-5 6 0 13 10 24 24 24 3 0 6-3 6-5l-6-5-4 3c-5-2-9-6-11-11l3-4z" fill="#ed1c24" ' + S + '/>'),
     siren: wrap(
       '<g ' + S + ' fill="none"><path d="M32 4v7M12.5 11l4.5 4.5M51.5 11L47 15.5"/></g>' +
       '<rect x="11" y="47" width="42" height="11" rx="3.5" fill="#9d9fa2" ' + S + '/>' +

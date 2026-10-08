@@ -328,3 +328,7 @@ details.notice-item summary::-webkit-details-marker{display:none}
 .eco-art{display:block;width:fit-content;margin:0 auto 10px}
 .eco-art .pg-mascot{width:150px}
 @media (max-width:400px){ .eco-art .pg-mascot{width:130px} }
+
+/* 안전 서비스 바로가기 6칸 */
+.quick .qtile{text-decoration:none;justify-content:flex-start}
+.quick .qtile b{line-height:1.25;word-break:keep-all}

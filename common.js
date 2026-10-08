@@ -38,8 +38,8 @@ U.mascotDuo = function(){
   return '<div class="pg-mascot-wrap"><img class="pg-mascot" src="./mascot-duo.png" alt="안전제일 어깨띠를 두르고 확성기와 안전 표지판을 든 한국산업인력공단 캐릭터" width="120" height="72"></div>';
 };
 /* 친환경 항목에 넣는 캐릭터 그림(지구를 안고 있는 모습) */
-U.mascotEco = function(){
-  return '<div class="pg-mascot-wrap eco-art"><img class="pg-mascot" src="./mascot-eco.png" alt="지구를 안고 있는 한국산업인력공단 캐릭터 두 마리" width="150" height="145"></div>';
+U.mascotEco = function(small){
+  return '<div class="pg-mascot-wrap' + (small ? '' : ' eco-art') + '"><img class="pg-mascot" src="./mascot-eco.png" alt="지구를 안고 있는 한국산업인력공단 캐릭터 두 마리" width="150" height="145"></div>';
 };
 document.addEventListener('error', function(e){
   var t = e.target;
