@@ -1,0 +1,17 @@
+{
+  "name": "안전·친환경 지킴이",
+  "short_name": "안전지킴이",
+  "description": "안전·친환경 수칙, 비상대응, 안전신문고를 한곳에서. 한국산업인력공단 홍보미디어실",
+  "lang": "ko",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef3ee",
+  "theme_color": "#0b6b4d",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

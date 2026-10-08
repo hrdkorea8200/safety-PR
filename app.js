@@ -38,22 +38,45 @@ function hashParts(){
 }
 let currentTab = hashParts()[0];
 if(!TABS.some(t => t.id === currentTab && !t.href)) currentTab = 'home';
+const PAGE_TITLES = { home:'', menu:'바로가기', rules:'안전수칙', emergency:'비상대응', report:'안전신문고', shoot:'촬영안전', eco:'친환경', search:'전체 검색', quiz:'오늘의 퀴즈' };
+function syncAppBar(){
+  document.body.dataset.page = currentTab;
+  const bt = $('#barTitle'); if(bt) bt.textContent = PAGE_TITLES[currentTab] || '';
+  const bb = $('#backBtn'); if(bb) bb.hidden = (currentTab === 'home');
+}
 function renderTabs(){
   $('#tabs').innerHTML = BAR.map(t =>
     `<button class="tab" role="tab" type="button" data-tab="${t.id}" aria-selected="${t.on.includes(currentTab)}">
        <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[t.id]}</svg><span>${t.label}</span></button>`).join('');
   $$('main > .panel').forEach(p => p.hidden = (p.id !== 'p-' + currentTab));
+  syncAppBar();
   if(currentTab === 'shoot' && window.ShootUI) window.ShootUI.route(hashParts()[1]);
   if(window.Extras) window.Extras.onShow(currentTab);
+}
+/* 화면 이동 기록: 휴대폰의 뒤로 가기 버튼과 화면 왼쪽 위 ‹ 버튼이 앱처럼 이전 화면으로 돌아가게 합니다 */
+let navDepth = 0;
+try{ history.replaceState({ d:0 }, ''); }catch(e){}
+window.addEventListener('popstate', () => {
+  const st = history.state;
+  if(st && typeof st.d === 'number') navDepth = st.d;
+  else { navDepth += 1; try{ history.replaceState({ d:navDepth }, ''); }catch(e){} }   /* 화면 안 링크로 이동한 경우 */
+});
+function goBack(){
+  if(navDepth > 0){ history.back(); return; }
+  if(currentTab === 'shoot' && hashParts()[1]){ location.hash = '#shoot'; return; }
+  go('home');
 }
 function go(id){
   const tt = TABS.find(t => t.id === id);
   if(tt && tt.href){ location.href = tt.href; return; }
   currentTab = id;
-  try{ history.replaceState(null, '', '#' + id); }catch(e){}
+  if(location.hash !== '#' + id){ try{ navDepth += 1; history.pushState({ d:navDepth }, '', '#' + id); }catch(e){ navDepth -= 1; } }
   renderTabs();
   window.scrollTo({ top:0, behavior:'auto' });
 }
+document.addEventListener('click', e => { if(e.target.closest('#backBtn')) goBack(); });
+/* 스크롤하면 앱 바에 현재 화면 제목이 나타납니다 */
+(function(){ let t = false; window.addEventListener('scroll', () => { if(t) return; t = true; requestAnimationFrame(() => { document.body.classList.toggle('scrolled', window.scrollY > 56); t = false; }); }, { passive:true }); })();
 document.addEventListener('click', e => {
   const tb = e.target.closest('[data-tab]'); if(tb){ go(tb.dataset.tab); return; }
   const g = e.target.closest('[data-go]'); if(g){ go(g.dataset.go); }
@@ -68,14 +91,15 @@ window.addEventListener('hashchange', () => {
 /* ===================== 홈 ===================== */
 /* 안전·환경 서비스 바로가기 6칸 (홈과 '바로가기' 화면이 같이 씁니다) */
 function quickTiles(){
-  const t = (go, art, name, label) => `<button class="qtile" type="button" data-go="${go}" aria-label="${label} 바로가기">${art}<b>${name}</b><span>바로가기 ›</span></button>`;
+  /* 색은 안전보건표지의 뜻을 따릅니다: 파랑=지시, 노랑=경고, 빨강=소방·긴급, 녹색=안내(친환경) */
+  const t = (go, art, name, label, tone) => `<button class="qtile tone-${tone}" type="button" data-go="${go}" aria-label="${label} 바로가기">${art}<b>${name}</b></button>`;
   return `<nav class="quick" aria-label="안전·환경 서비스 바로가기">
-      ${t('rules', ART.helmet, '안전정보', '안전정보')}
-      ${t('report', ART.bubble, '안전신문고', '안전신문고')}
-      <button class="qtile q-emg" type="button" data-go="emergency" aria-label="비상대응 바로가기">${ART.siren}<b>비상대응</b><span>바로가기 ›</span></button>
-      ${t('shoot', ART.camera, '촬영현장 안전가이드', '촬영현장 안전가이드')}
-      ${t('eco', ART.eco, '친환경', '친환경')}
-      <a class="qtile q-emg" href="tel:119" aria-label="긴급상황 119 전화">${ART.phone}<b>긴급상황 119</b><span>전화 걸기 ›</span></a>
+      ${t('rules', ART.helmet, '안전정보', '안전정보', 'blue')}
+      ${t('report', ART.bubble, '안전신문고', '안전신문고', 'yellow')}
+      ${t('emergency', ART.siren, '비상대응', '비상대응', 'red')}
+      ${t('shoot', ART.camera, '촬영현장 안전가이드', '촬영현장 안전가이드', 'navy')}
+      ${t('eco', ART.eco, '친환경', '친환경', 'green')}
+      <a class="qtile tone-call" href="tel:119" aria-label="긴급상황 119 전화">${ART.phone}<b>긴급상황 119</b></a>
     </nav>`;
 }
 
@@ -83,6 +107,11 @@ function renderHome(){
   const tip = WX.todayTip(TIPS);
   $('#p-home').innerHTML = `
     <h1 class="sr-only">${esc(CONFIG.orgName)} ${esc(CONFIG.siteTitle || '안전·친환경 지킴이')}</h1>
+
+    <button class="search-launch" type="button" data-go="search" aria-label="전체 검색">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+      <span>무엇이든 찾아보세요 <em>소화기 · 분리배출 · 드론</em></span>
+    </button>
 
     <div id="wxSlot">${WX.render({ state:'loading', tip:tip })}</div>
 
@@ -126,6 +155,7 @@ function renderMenu(){
       ${window.U.mascotDuo()}
     </div>
     ${quickTiles()}
+    <div id="installSlot"></div>
     <div class="menu-more">
       <button class="btn ghost" type="button" data-go="search">🔍 전체 검색</button>
       <button class="btn ghost" type="button" data-go="quiz">🧠 오늘의 퀴즈</button>
@@ -208,7 +238,7 @@ function renderNotices(list){
   const box = $('#noticeList'); if(!box) return;
   if(!list.length){ box.innerHTML = '<p class="muted">등록된 공지사항이 없습니다.</p>'; return; }
   const SHOW = 5;
-  box.innerHTML = list.map((n, i) => `<details class="notice-item${n.pinned ? ' pinned' : ''}"${i === 0 ? ' open' : ''}${i >= SHOW ? ' data-more hidden' : ''}>
+  box.innerHTML = list.map((n, i) => `<details class="notice-item${n.pinned ? ' pinned' : ''}"${i >= SHOW ? ' data-more hidden' : ''}>
       <summary><span class="n-title">${n.pinned ? '<span class="npin">📌 고정</span>' : ''}${esc(n.title)}</span><span class="n-date">${esc(fmtDate(n.createdAt))}</span></summary>
       <div class="n-body">${esc(n.body) || '<span class="muted">(내용 없음)</span>'}</div></details>`).join('')
     + (list.length > SHOW ? `<button class="btn ghost block" type="button" id="noticeMore">이전 공지 더 보기 (${list.length - SHOW}건)</button>` : '');
@@ -568,7 +598,7 @@ $('#orgName').textContent = CONFIG.orgName;
 document.title = (CONFIG.siteTitle || '안전·친환경 지킴이') + ' · ' + CONFIG.orgName;
 const bs = $('#siteSub'); if(bs) bs.textContent = CONFIG.siteTitle || '안전·친환경 지킴이';
 renderHome(); renderMenu(); renderEco(); renderRules(); renderEmergency(); renderReport();
-if(window.Extras){ window.Extras.init(); window.Extras.mountHome(); window.Extras.mountEco(); }
+if(window.Extras){ window.Extras.init(); window.Extras.mountHome(); window.Extras.mountEco(); window.Extras.mountInstall(); }
 renderTabs();
 loadWeather();
 loadNotices();

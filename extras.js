@@ -338,9 +338,32 @@ function mountChallenge(){
   });
 }
 
+/* ===================== 6) 앱처럼 설치하기 (홈 화면에 추가) ===================== */
+function isStandalone(){ try{ return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }catch(e){ return false; } }
+function mountInstall(){
+  const slot = $('#installSlot'); if(!slot) return;
+  if(isStandalone()){ slot.innerHTML = ''; return; }
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  slot.innerHTML = `<section class="card install-card" aria-label="앱처럼 설치하기">
+      <div class="ins-ic" aria-hidden="true">📲</div>
+      <div class="ins-tx"><b>앱처럼 설치하기</b>
+        <p class="muted small">${ios ? '사파리 아래쪽 <b>공유 버튼(□↑)</b>을 누르고 <b>“홈 화면에 추가”</b>를 고르면 앱 아이콘이 생겨요.' : '홈 화면에 추가하면 앱처럼 바로 열리고, 인터넷이 불안정해도 안전수칙·비상대응을 볼 수 있어요.'}</p>
+        ${ios ? '' : '<button class="btn primary" type="button" id="installBtn">홈 화면에 추가</button>'}</div>
+    </section>`;
+  const b = $('#installBtn');
+  if(b) b.addEventListener('click', async () => {
+    const ev = window.__installEvt;
+    if(!ev){ toast('브라우저 메뉴(⋮)에서 “홈 화면에 추가” 또는 “앱 설치”를 눌러 주세요.'); return; }
+    ev.prompt(); try{ await ev.userChoice; }catch(e){}
+    window.__installEvt = null;
+  });
+  window.addEventListener('appinstalled', () => { const s = $('#installSlot'); if(s) s.innerHTML = ''; });
+}
+
 /* ===================== app.js 와 연결 ===================== */
 E.mountHome = function(){ mountCampaign(); mountQuizCard(); };
 E.mountEco = function(){ mountChallenge(); };
+E.mountInstall = mountInstall;
 E.onShow = function(tab){
   if(tab === 'search') renderSearch();
   else if(tab === 'quiz') renderQuiz();
