@@ -155,6 +155,7 @@ function renderMenu(){
       ${window.U.mascotDuo()}
     </div>
     ${quickTiles()}
+    <div id="offlineSlot"></div>
     <div id="installSlot"></div>
     <div class="menu-more">
       <button class="btn ghost" type="button" data-go="search">🔍 전체 검색</button>
@@ -598,7 +599,7 @@ $('#orgName').textContent = CONFIG.orgName;
 document.title = (CONFIG.siteTitle || '안전·친환경 지킴이') + ' · ' + CONFIG.orgName;
 const bs = $('#siteSub'); if(bs) bs.textContent = CONFIG.siteTitle || '안전·친환경 지킴이';
 renderHome(); renderMenu(); renderEco(); renderRules(); renderEmergency(); renderReport();
-if(window.Extras){ window.Extras.init(); window.Extras.mountHome(); window.Extras.mountEco(); window.Extras.mountInstall(); }
+if(window.Extras){ window.Extras.init(); window.Extras.mountHome(); window.Extras.mountEco(); window.Extras.mountInstall(); window.Extras.mountOffline(); }
 renderTabs();
 loadWeather();
 loadNotices();

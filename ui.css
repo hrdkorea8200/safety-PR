@@ -157,6 +157,16 @@ details.acc[open]{border-color:color-mix(in srgb,var(--brand) 55%,var(--line))}
 #btnSubmit{position:sticky;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:6;box-shadow:0 10px 24px rgba(8,50,35,.28)}
 .toast{bottom:calc(100px + env(safe-area-inset-bottom,0px));border-radius:16px}
 
+/* ---- 오프라인 안내 ---- */
+.offline-bar{display:flex;gap:8px;align-items:flex-start;padding:8px 16px;background:var(--warn);color:var(--warn-ink);font-size:13px;font-weight:700;line-height:1.45}
+.offline-bar[hidden]{display:none}
+.offline-bar a{color:inherit;font-weight:900;text-decoration:underline}
+.offline-card{display:flex;gap:14px;align-items:flex-start}
+.offline-card .ins-ic{font-size:30px;line-height:1;flex:none}
+.offline-card .ins-tx{display:flex;flex-direction:column;gap:6px;min-width:0}
+.offline-card p{margin:0}
+.offline-card.ready{border-color:color-mix(in srgb,var(--brand) 50%,var(--line));background:color-mix(in srgb,var(--brand) 8%,var(--surface))}
+
 /* ---- 고대비 모드에서는 색 대신 선과 대비를 우선 ---- */
 :root[data-contrast="high"] .qtile{background:var(--surface);border:2px solid var(--line)}
 :root[data-contrast="high"] .qtile.tone-call{background:#c8283b;border-color:#fff}

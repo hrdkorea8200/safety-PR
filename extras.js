@@ -360,6 +360,40 @@ function mountInstall(){
   window.addEventListener('appinstalled', () => { const s = $('#installSlot'); if(s) s.innerHTML = ''; });
 }
 
+/* ===================== 7) 오프라인 사용 (저장 상태 확인 · 연결 끊김 안내) ===================== */
+async function offlineStatus(){
+  if(!('serviceWorker' in navigator) || !('caches' in window)) return { ok:false, why:'unsupported' };
+  try{
+    const reg = await navigator.serviceWorker.getRegistration();
+    if(!reg || !reg.active) return { ok:false, why:'pending' };
+    const keys = await caches.keys(); const k = keys.find(x => x.indexOf('safety-app-') === 0);
+    if(!k) return { ok:false, why:'pending' };
+    const n = (await (await caches.open(k)).keys()).length;
+    return { ok:n >= 18, why:n >= 18 ? 'ready' : 'pending', n:n };
+  }catch(e){ return { ok:false, why:'pending' }; }
+}
+function mountOffline(){
+  const slot = $('#offlineSlot'); if(!slot) return;
+  slot.innerHTML = `<section class="card offline-card" aria-label="오프라인 사용">
+      <div class="ins-ic" aria-hidden="true">📴</div>
+      <div class="ins-tx"><b>인터넷이 없어도 볼 수 있어요</b><p class="muted small" id="offTxt">저장 상태를 확인하고 있어요…</p></div>
+    </section>`;
+  const set = (ok, txt) => { const t = $('#offTxt'); if(!t) return; t.innerHTML = txt; const c = $('.offline-card'); if(c) c.classList.toggle('ready', !!ok); };
+  const check = async (again) => {
+    const r = await offlineStatus();
+    if(r.ok) set(true, '✅ <b>준비 완료.</b> 안전수칙·비상대응·촬영안전·친환경·퀴즈가 이 기기에 저장되어 있어요. 연결이 끊겨도 열립니다. (제보 접수·접수번호 조회·공지·안전 날씨는 인터넷이 필요해요)');
+    else if(r.why === 'unsupported') set(false, '이 주소·브라우저에서는 오프라인 저장을 쓸 수 없어요. https 주소(GitHub Pages)에서 최신 크롬·사파리로 열어 주세요.');
+    else { set(false, '⏳ 아직 저장 중이에요. <b>인터넷이 연결된 상태에서</b> 이 앱을 한 번 더 열어 주세요.'); if(again) setTimeout(() => check(again - 1), 2500); }
+  };
+  check(3);
+}
+E.mountOffline = mountOffline;
+function syncOnline(){
+  const off = (typeof navigator.onLine === 'boolean') && !navigator.onLine;
+  const bar = $('#offlineBar'); if(bar) bar.hidden = !off;
+  document.documentElement.toggleAttribute('data-offline', off);
+}
+
 /* ===================== app.js 와 연결 ===================== */
 E.mountHome = function(){ mountCampaign(); mountQuizCard(); };
 E.mountEco = function(){ mountChallenge(); };
@@ -371,6 +405,7 @@ E.onShow = function(tab){
 };
 E.init = function(){
   a11yApply();
+  syncOnline(); window.addEventListener('online', syncOnline); window.addEventListener('offline', syncOnline);
   const sb = $('#searchBtn'); if(sb) sb.addEventListener('click', () => { location.hash = '#search'; });
   const ab = $('#a11yBtn'); if(ab) ab.addEventListener('click', openA11y);
 };
