@@ -1,483 +1,260 @@
-:root{
-  box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  color-scheme:light;
-  --bg:#f3f6f4; --surface:#ffffff; --surface2:#f7faf8; --text:#13231c; --muted:#5a6b63; --line:#dde6e1;
-  --brand:#0e7a58; --brand-ink:#ffffff; --brand-soft:#e2f4ec; --hero-a:#0e7a58; --hero-b:#0a4f3a;
-  --warn:#f6b800; --warn-ink:#2b2100; --warn-soft:#fff5d1;
-  --danger:#cf3a2d; --danger-soft:#fde9e6; --info:#255fa6; --info-soft:#e6eefa;
-  --shadow:0 6px 24px rgba(10,50,35,.10);
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    color-scheme:dark;
-    --bg:#0c1512; --surface:#15221d; --surface2:#1a2a24; --text:#e7f1ec; --muted:#9db3a9; --line:#27392f;
-    --brand:#3cc795; --brand-ink:#052116; --brand-soft:#17382c; --hero-a:#136b4e; --hero-b:#0a3a2b;
-    --warn:#f6c231; --warn-ink:#2b2100; --warn-soft:#3a3110;
-    --danger:#ff7d6e; --danger-soft:#3c1d19; --info:#7db2f2; --info-soft:#17283f;
-    --shadow:0 6px 24px rgba(0,0,0,.4);
-  }
-}
-:root[data-theme="dark"]{
-  color-scheme:dark;
-  --bg:#0c1512; --surface:#15221d; --surface2:#1a2a24; --text:#e7f1ec; --muted:#9db3a9; --line:#27392f;
-  --brand:#3cc795; --brand-ink:#052116; --brand-soft:#17382c; --hero-a:#136b4e; --hero-b:#0a3a2b;
-  --warn:#f6c231; --warn-ink:#2b2100; --warn-soft:#3a3110;
-  --danger:#ff7d6e; --danger-soft:#3c1d19; --info:#7db2f2; --info-soft:#17283f;
-  --shadow:0 6px 24px rgba(0,0,0,.4);
-}
-html{scroll-padding-top:env(safe-area-inset-top,0px);}
-*,*::before,*::after{box-sizing:inherit}
-body{margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;font-size:16px;line-height:1.65;-webkit-text-size-adjust:100%;word-break:keep-all;overflow-wrap:anywhere}
-h1,h2,h3,p,ul,ol{margin:0}
-button,input,select,textarea{font:inherit;color:inherit}
-a{color:var(--brand)}
-.wrap{max-width:760px;margin:0 auto;padding:0 16px}
-[hidden]{display:none!important}
+/* 안전수칙·비상대응 콘텐츠 */
+window.CONTENT = (function(){
+const TIPS = [
+  '의자 위에 올라서지 마세요. 발받침이나 안전 사다리를 사용하세요.',
+  '멀티탭에 멀티탭을 연결하지 마세요. 정격용량을 꼭 확인하세요.',
+  '계단에서는 손잡이를 잡고, 휴대폰은 잠시 넣어두세요.',
+  '1시간마다 일어나 목과 어깨를 풀어주세요.',
+  '서랍과 캐비닛은 한 번에 한 칸만 여세요.',
+  '바닥에 늘어진 전선은 넘어짐 사고의 원인입니다. 정리해 주세요.',
+  '소화기와 비상구 위치, 오늘 한 번 확인해 보세요.',
+  '아차 싶었던 순간이 있었나요? 안전신문고에 남겨 주세요.',
+  '퇴근 전에 전열기구와 멀티탭 전원을 확인하세요.',
+  '젖은 바닥을 발견하면 지나치지 말고 표지를 세우거나 알려 주세요.',
+  '복도와 비상구 앞에 박스를 쌓아두지 않았는지 살펴보세요.',
+  '모니터 상단은 눈높이와 비슷하거나 약간 아래에 두세요.',
+  '의자에는 깊숙이 앉아 허리를 등받이에 기대세요.',
+  '마우스를 쥔 손목이 꺾이지 않도록 팔꿈치 높이를 맞춰 보세요.',
+  '20분마다 20초, 먼 곳을 바라보며 눈을 쉬게 해 주세요.',
+  '무거운 박스는 무릎을 굽혀 몸에 붙여 들고, 무거우면 카트를 쓰세요.',
+  '비 오는 날 로비와 현관은 미끄럽습니다. 보폭을 줄여 천천히 걸으세요.',
+  '우산에서 떨어진 물기는 바로 닦아 다른 사람이 미끄러지지 않게 해 주세요.',
+  '젖은 손으로 플러그나 전기기기를 만지지 마세요.',
+  '플러그를 뽑을 때는 전선이 아니라 몸체를 잡으세요.',
+  '전선 피복이 벗겨졌거나 플러그가 뜨겁다면 즉시 사용을 멈추고 알려 주세요.',
+  '히터와 전열기구 주변에는 종이와 박스를 두지 마세요.',
+  '방화문은 열어두거나 물건으로 고정하지 마세요.',
+  '소화기 압력 게이지가 녹색 범위에 있는지 눈으로 확인해 보세요.',
+  '화재가 나면 엘리베이터가 아니라 계단으로 대피하세요.',
+  '연기가 많으면 낮은 자세로, 젖은 수건으로 코와 입을 가리고 대피하세요.',
+  '비상구 유도등이 꺼져 있거나 가려져 있다면 시설 담당자에게 알려 주세요.',
+  '문서 파쇄기를 쓸 때는 넥타이, 긴 머리, 헐렁한 소매를 조심하세요.',
+  '파쇄기 걸림을 제거하기 전에는 반드시 전원을 끄세요.',
+  '커터칼은 사용 후 날을 넣어 두고, 몸 반대 방향으로 사용하세요.',
+  '깨진 유리나 컵은 맨손으로 줍지 말고 빗자루와 집게를 쓰세요.',
+  '높은 선반에는 가벼운 물건을, 무거운 물건은 아래 칸에 두세요.',
+  '캐비닛 위에 물건을 쌓아 올리지 마세요. 떨어지면 크게 다칠 수 있습니다.',
+  '회전의자에 앉기 전에 의자가 제자리에 있는지 먼저 확인하세요.',
+  '복합기 용지 걸림을 처리할 때는 뜨거운 부위를 만지지 마세요.',
+  '고객의 폭언이나 폭행이 있으면 참지 말고 응대를 멈추고 보호를 요청하세요.',
+  '힘든 민원 응대 뒤에는 잠시 쉬고, 동료와 이야기를 나눠 보세요.',
+  '수급업체 작업자와 작업 내용·구역·시간을 미리 공유해 주세요.',
+  '방문객이 안내자와 함께 이동할 수 있도록 도와주세요.',
+  '청소 중인 구역에 미끄럼 주의 표지가 세워져 있는지 확인하세요.',
+  '케이블 커버나 몰딩으로 바닥 전선을 정리하면 넘어짐을 예방할 수 있어요.',
+  '지진이 나면 튼튼한 책상 아래에서 머리와 목을 보호하세요.',
+  '쓰러진 사람을 보면 반응을 확인하고 119에 신고한 뒤 AED를 요청하세요.',
+  'AED 위치를 오늘 한 번 확인해 두세요. 위치는 비상대응 탭에 있습니다.',
+  '목이나 어깨가 뻐근하면 스트레칭을 하고, 통증이 계속되면 상담받으세요.',
+  '노트북은 거치대와 외장 키보드를 쓰면 목과 어깨 부담이 줄어듭니다.',
+  '오래 앉아 있었다면 잠시 걸어서 물 한 잔 마시고 오세요.',
+  '퇴근할 때 탕비실 전기포트와 전자레인지 전원을 확인하세요.',
+  '사소한 위험도 말해 주세요. 작은 신고가 큰 사고를 막습니다.',
+  '위험하다고 느끼면 멈추고 도움을 요청하세요. 안전이 가장 먼저입니다.'
+,
+  '퇴근할 때 멀티탭 스위치를 끄면 전기도 아끼고 화재 예방도 됩니다.',
+  '폐건전지와 보조배터리는 일반 쓰레기통이 아니라 전용 수거함에 모아 주세요. 화재 예방에도 중요합니다.',
+  '개인 컵을 쓰면 일회용품도 줄고, 쓰레기통 주변이 젖어 미끄러질 일도 줄어요.',
+  '재활용품은 비우고 헹궈서 내놓아요. 남은 음료는 바닥에 흘리지 않게 조심하세요.',
+  '깨진 유리나 날카로운 물건은 두껍게 싸고 “깨진 유리”라고 표시해서 버려요.',
+  '가까운 층은 계단을 이용해 보세요. 에너지도 아끼고 건강에도 좋아요. 손잡이를 잡고 휴대폰은 잠시 넣어 두세요.'
+];
 
-/* header */
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.top-in{display:flex;align-items:center;justify-content:space-between;height:56px}
-.brand{display:flex;align-items:center;gap:10px;min-width:0}
-.brand svg{flex:none;color:var(--brand)}
-.brand-name{font-weight:800;font-size:15px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.brand-sub{font-size:12px;color:var(--muted);line-height:1.2}
-.icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer}
-.icon-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+const RULES10 = [
+  '통로와 비상구 앞은 항상 비워둡니다.',
+  '바닥의 전선·멀티탭은 정리하고, 멀티탭 연결(문어발)은 하지 않습니다.',
+  '젖은 바닥과 계단은 표지를 세우고 바로 닦거나 알립니다.',
+  '의자·책상 위에 올라서지 않고 발판이나 사다리를 사용합니다.',
+  '모니터는 눈높이에, 의자는 허리를 받치도록 맞춥니다.',
+  '1시간마다 일어나 스트레칭합니다.',
+  '퇴근 전 전열기구와 불필요한 전원을 끕니다.',
+  '소화기·비상구·집결지 위치를 기억합니다.',
+  '아차 했던 순간, 작은 위험도 안전신문고에 알립니다.',
+  '위험하다고 느끼면 멈추고, 도움을 요청합니다.'
+];
 
-/* .wrap의 padding(0 16px)에 덮어씌워지지 않도록 main.wrap 로 지정. 하단 고정 메뉴(약 66px)+iPhone 홈 영역만큼 여백 확보 */
-main.wrap{padding-top:18px;padding-bottom:calc(132px + env(safe-area-inset-bottom,0px))}
-.panel,.stack{display:flex;flex-direction:column;gap:14px}
-h2{font-size:18px;font-weight:800;margin-top:10px}
-h3{font-size:16px;font-weight:700}
-.muted{color:var(--muted)}
-.small{font-size:13px}
+const SELFCHECK = [
+  '모니터 상단이 눈높이와 비슷하거나 약간 낮다',
+  '의자에 앉으면 발바닥이 바닥에 닿고 허리가 받쳐진다',
+  '내 자리 주변 통로에 전선이나 박스가 없다',
+  '멀티탭을 연결해 쓰지(문어발) 않고 정격용량 안에서 쓴다',
+  '가까운 소화기와 비상구 위치를 알고 있다',
+  '높은 선반이나 캐비닛 위에 무거운 물건을 두지 않았다',
+  '1시간에 한 번은 일어나 스트레칭한다',
+  '퇴근할 때 전열기구와 불필요한 전원을 끈다'
+];
 
-/* hero */
-.hero{background:linear-gradient(135deg,var(--hero-a),var(--hero-b));color:#fff;border-radius:22px;padding:24px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
-.hero::after{content:"";position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.08)}
-.eyebrow{font-size:12px;letter-spacing:.14em;font-weight:700;opacity:.8}
-.hero h1{font-size:26px;line-height:1.3;font-weight:800;margin:6px 0 8px}
-.hero p{opacity:.92;font-size:15px}
-.hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;position:relative;z-index:1}
+const RULES = [
+  { icon:'🚶', title:'넘어짐 · 미끄러짐 예방',
+    intro:'사무실 사고 가운데 가장 흔한 유형이 넘어짐과 미끄러짐입니다. 대부분 작은 정리로 막을 수 있습니다.',
+    do:['통로와 비상구 앞에 물건을 두지 않습니다.','바닥 전선과 멀티탭 선은 케이블 커버나 몰딩으로 정리합니다.','바닥이 젖었거나 청소 중이면 <b>미끄럼 주의 표지</b>를 세웁니다.','계단에서는 손잡이를 잡고, 걸을 때 휴대폰을 보지 않습니다.','높은 곳의 물건은 안전 발판이나 사다리를 쓰고, 가능하면 보조자와 함께합니다.'],
+    dont:['의자·책상 위에 올라서기','서랍과 캐비닛을 연 채 자리 비우기','바퀴 달린 의자를 발판 대용으로 쓰기'] },
+  { icon:'⚡', title:'전기 안전',
+    do:['멀티탭의 <b>정격용량</b>을 확인하고 여유 있게 사용합니다.','플러그를 뽑을 때는 전선이 아니라 몸체를 잡습니다.','전선 피복이 벗겨졌거나 플러그가 뜨겁고 타는 냄새가 나면 즉시 사용을 멈추고 시설 담당자에게 알립니다.','개인 난방기구는 회사 지침에 따라 사용하고, 퇴근 시 전원과 플러그를 확인합니다.','퇴근할 때 모니터·프린터 등 불필요한 전원을 끕니다.'],
+    dont:['멀티탭에 멀티탭 연결하기(문어발)','젖은 손으로 플러그·전기기기 만지기','전선을 접거나 책상·의자 다리 아래로 눌러두기'] },
+  { icon:'🔥', title:'화재 예방',
+    do:['소화기, 소화전, 비상구, 화재경보기 위치를 확인해 둡니다.','소화기 압력 게이지가 <b>정상 범위(녹색)</b>인지 눈으로 살펴봅니다.','히터·전열기구는 제품 설명서의 이격거리를 지키고 종이·박스를 가까이 두지 않습니다.','방화문과 비상구는 닫힌 상태를 유지하고, 문 앞을 비워둡니다.','흡연은 지정된 장소에서만 하고 꽁초는 완전히 끈 뒤 버립니다.'],
+    dont:['방화문을 열어두거나 물건으로 고정하기','소화기 앞에 물건 쌓기','전열기구를 켜둔 채 자리 비우기'] },
+  { icon:'🪑', title:'올바른 자세 · 근골격계 예방',
+    intro:'장시간 앉아서 모니터를 보는 업무는 목·어깨·허리·손목 통증과 눈 피로의 원인이 됩니다.',
+    do:['모니터 상단을 눈높이와 비슷하거나 약간 아래에 두고, 눈과 화면 사이는 <b>50cm 이상</b> 유지합니다.','의자에 깊숙이 앉아 허리를 등받이에 대고, 팔꿈치는 약 90°, 발바닥은 바닥에 붙입니다.','연속 작업은 <b>1시간 이내</b>로 하고, 그 뒤 10~15분 정도 쉬며 스트레칭합니다.','20분마다 20초 동안 먼 곳을 바라보며 눈을 쉬게 합니다.','무거운 물건은 몸에 붙이고 무릎을 굽혀 들며, 무거우면 카트나 2인 이상으로 옮깁니다.','통증·저림이 계속되면 참지 말고 보건 담당자나 의료기관과 상담합니다.'],
+    dont:['허리를 비튼 채 무거운 물건 들기','노트북을 무릎·침대 위에서 장시간 쓰기','통증을 참고 같은 자세로 계속 일하기'] },
+  { icon:'🗄️', title:'사무기기 · 집기 안전',
+    do:['캐비닛·서랍은 <b>한 번에 한 칸만</b> 열고, 무거운 물품은 아래 칸에 둡니다.','높은 선반은 하중을 넘기지 않고, 낙하할 만한 물건은 안쪽으로 정리합니다.','문서 파쇄기는 넥타이·장갑·긴 머리·헐렁한 소매를 주의하고, 청소나 걸림 제거 전 반드시 전원을 끕니다.','커터칼·가위는 사용 후 날을 넣어두고, 몸 반대 방향으로 사용합니다.','복합기 용지 걸림 처리 시 뜨거운 부위를 만지지 않습니다.','깨진 유리나 컵은 맨손으로 줍지 않고 빗자루·집게를 씁니다.'],
+    dont:['서랍 여러 칸을 동시에 열기','파쇄기 투입구에 손가락·도구 넣기','칼날을 꺼낸 채 책상 위에 두기'] },
+  { icon:'🤝', title:'고객 · 민원 응대 (감정노동) 보호',
+    intro:'고객의 폭언·폭행 등으로부터 근로자의 건강을 보호하는 조치는 사업주의 의무입니다(산업안전보건법 제41조).',
+    do:['폭언·폭행·성희롱 등이 있으면 <b>응대를 중단하고 보호를 요청</b>할 수 있습니다.','즉시 상급자나 안전 담당자에게 알리고, 사실관계를 기록해 둡니다.','회사 절차에 따라 증거(녹취·CCTV 등) 확보를 요청합니다.','응대 후 마음이 힘들면 휴식이나 상담 지원을 요청합니다.','혼자 감당하지 말고 동료와 상황을 공유합니다.'],
+    note:'안전신문고에서도 고객 응대 중 겪은 위험이나 불편한 상황을 제보할 수 있습니다.' },
+  { icon:'🧰', title:'수급업체 · 방문자 안전',
+    do:['방문 시 출입 등록을 하고 방문증을 착용하며, 안내자와 함께 이동합니다.','청소·시설·공사 등 작업 전에 <b>작업 내용·시간·구역</b>을 담당 부서와 공유합니다.','작업 구역에는 표지·고깔 등을 설치하고, 종료 후 원상복구를 확인합니다.','전기·고소작업 등 위험 작업은 사전 승인을 받고 필요한 보호구를 착용합니다.','급박한 위험이 있으면 작업을 멈추고 대피한 뒤 담당자에게 알립니다.'],
+    dont:['담당자 모르게 위험 작업 시작하기','안내 없이 출입 제한 구역에 들어가기'] }
 
-/* buttons */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:14px;border:1px solid transparent;font-weight:700;cursor:pointer;text-decoration:none;font-size:15px}
-.btn.primary{background:var(--brand);color:var(--brand-ink)}
-.btn.warn{background:var(--warn);color:var(--warn-ink)}
-.btn.glass{background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.35)}
-.btn.ghost{background:var(--surface);border-color:var(--line);color:var(--text)}
-.btn.danger{background:var(--danger-soft);color:var(--danger);border-color:var(--danger)}
-.btn.block{width:100%}
-.btn:disabled{opacity:.55;cursor:not-allowed}
-.btn:focus-visible,.tab:focus-visible,.icon-btn:focus-visible,summary:focus-visible,.item:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+,
+  { icon:'☔', title:'장마 · 집중호우',
+    intro:'비와 습기는 감전·누전·미끄러짐 사고를 늘립니다. 특히 출입구와 계단이 위험합니다.',
+    do:['출입구에 매트와 우산꽂이를 두어 빗물이 건물 안으로 번지지 않게 하고, 젖은 바닥은 바로 닦고 <b>미끄럼 주의 표지</b>를 세웁니다.','천장 얼룩·누수·곰팡이를 보면 즉시 시설 담당자에게 알립니다.','누수가 있는 곳 가까이의 멀티탭과 전기기기는 전원을 끄고 옮깁니다.','호우경보·재난문자를 확인하고, 침수 위험 안내가 있으면 안내에 따라 이동하거나 대피합니다.'],
+    dont:['젖은 손으로 전기기기·플러그 만지기','누수 부위 아래에서 전기기기를 계속 사용하기','물에 잠겼거나 잠길 우려가 있는 곳에 들어가기'] },
+  { icon:'🥵', title:'폭염 안전',
+    do:['실내 온도를 기관 지침에 맞게 유지하고, 시원한 물을 자주 마십니다. 갈증이 없어도 마십니다.','한낮 이동·외부 작업은 피하고, 불가피하면 자주 그늘에서 쉽니다.','어지러움·두통·구토·근육 경련이 있으면 바로 쉬고 시원한 곳으로 이동합니다. 증상이 심하면 <b>비상대응의 “열사병” 요령</b>을 따릅니다.','한여름 차량 안에 <b>보조배터리·스프레이 캔·라이터</b>를 두지 않습니다. 폭발·화재 위험이 있습니다.'],
+    dont:['정차한 차 안에 사람·동물을 두기','물을 마시지 않고 버티기'] },
+  { icon:'🥶', title:'한파 · 빙판 안전',
+    do:['출입구·주차장·계단의 결빙을 보면 바로 알리고, 제설제를 뿌리거나 미끄럼 주의 표지를 세웁니다.','미끄럽지 않은 신발을 신고, 손은 주머니에서 빼 균형을 잡습니다. 걸을 때 휴대폰을 보지 않습니다.','난방기구는 제품 설명서의 이격거리를 지키고, 자리를 비울 때 끕니다.','수도·배관이 얼지 않게 보온하고, 동파가 의심되면 시설 담당자에게 알립니다.'],
+    dont:['빙판길을 뛰어서 이동하기','난방기구 가까이에 종이·박스·옷을 두기'] },
+  { icon:'😷', title:'미세먼지 · 환기',
+    do:['미세먼지·초미세먼지 예보가 <b>나쁨 이상</b>이면 창문을 닫고, 외출은 줄이며 불가피하면 보건용 마스크를 씁니다.','환기는 농도가 낮은 시간대에 짧게 자주 합니다. 공기청정기는 필터 교체 시기를 확인합니다.','회의실처럼 닫힌 공간에서 오래 회의할 때는 중간에 환기합니다.','건조한 날에는 물을 자주 마시고, 눈·목이 불편하면 쉬면서 보건 담당자와 상담합니다.'],
+    dont:['미세먼지가 나쁜 시간에 오래 창문 열어 두기','환기 없이 닫힌 공간에서 장시간 머물기'] },
+  { icon:'🦠', title:'감염병 예방',
+    note:'감염병 유행 시에는 보건당국과 기관의 지침이 우선합니다.',
+    do:['비누로 <b>30초 이상</b> 손을 씻거나 손소독제를 씁니다. 식사 전, 화장실 뒤, 외출 뒤에 합니다.','기침이나 재채기는 옷소매 안쪽으로 가립니다.','증상이 있으면 무리해서 근무하지 말고, 기관 지침에 따라 진료를 받거나 쉽니다.','손이 자주 닿는 곳(문손잡이·회의실 리모컨·공용 마우스)은 정기적으로 닦습니다. 알코올 소독제는 <b>가연성</b>이므로 화기 근처에서 쓰지 않고 환기합니다.','실내는 하루 2~3회, 한 번에 10분 안팎 환기합니다.'],
+    dont:['기침을 손으로 막고 그대로 물건 만지기','아픈데도 참고 회의에 참석하기'] }
+];
 
-/* cards */
-.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
-.feature{display:flex;flex-direction:column;gap:6px;text-align:left;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;color:inherit}
-.feature .em{font-size:26px}
-.feature b{font-size:16px}
-.feature span{font-size:13.5px;color:var(--muted)}
-.tip{background:var(--warn-soft);border-color:transparent}
-.tip-label{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--text);opacity:.65}
-.tip p{font-weight:700;margin-top:4px}
-
-/* heinrich */
-.pyr{display:flex;flex-direction:column;gap:6px;margin:12px 0}
-.pyr div{display:flex;align-items:center;gap:10px;border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700}
-.pyr .a{background:var(--danger-soft);color:var(--danger);width:46%}
-.pyr .b{background:var(--warn-soft);color:var(--text);width:72%}
-.pyr .c{background:var(--brand-soft);color:var(--brand);width:100%}
-.pyr em{font-style:normal;font-size:20px;font-weight:800;min-width:42px}
-
-/* lists */
-.rules10{list-style:none;padding:0;counter-reset:r;display:flex;flex-direction:column;gap:8px}
-.rules10 li{counter-increment:r;display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-.rules10 li::before{content:counter(r);flex:none;width:26px;height:26px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-weight:800;font-size:13px;margin-top:1px}
-
-details.acc{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-details.acc summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;font-weight:700;min-height:56px}
-details.acc summary::-webkit-details-marker{display:none}
-details.acc summary::after{content:"＋";margin-left:auto;color:var(--muted);font-weight:400}
-details.acc[open] summary::after{content:"－"}
-.acc-ic{font-size:22px}
-.acc-body{padding:2px 16px 16px;display:flex;flex-direction:column;gap:8px;font-size:15px}
-.lbl{font-size:12px;font-weight:800;letter-spacing:.04em;margin-top:6px}
-.lbl.ok{color:var(--brand)} .lbl.no{color:var(--danger)}
-.ul{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:6px}
-.ul li{position:relative;padding-left:24px}
-.ul li::before{position:absolute;left:0;top:0;font-weight:800}
-.ul.ok li::before{content:"✓";color:var(--brand)}
-.ul.no li::before{content:"✕";color:var(--danger)}
-ol.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:8px}
-ol.steps li{counter-increment:s;position:relative;padding-left:36px}
-ol.steps li::before{content:counter(s);position:absolute;left:0;top:1px;width:24px;height:24px;border-radius:50%;background:var(--info-soft);color:var(--info);display:grid;place-items:center;font-weight:800;font-size:13px}
-.note{background:var(--surface2);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--muted)}
-
-/* contacts */
-.contact{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
-.contact:last-child{border-bottom:0}
-.contact b{display:block}
-.contact .num{font-weight:800;font-size:18px}
-.callbtn{min-height:44px;padding:0 16px;border-radius:12px;background:var(--danger);color:#fff;font-weight:800;text-decoration:none;display:inline-flex;align-items:center}
-.facts{display:grid;gap:8px;margin-top:6px}
-.fact{display:flex;gap:10px;font-size:14.5px}
-.fact b{min-width:84px;color:var(--muted);font-weight:700}
-
-/* check */
-.chk{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
-.chk:last-of-type{border-bottom:0}
-.chk input{width:22px;height:22px;margin-top:2px;accent-color:var(--brand);flex:none}
-.score{display:flex;align-items:center;gap:10px;margin-top:10px;font-weight:700}
-.bar{flex:1;height:10px;border-radius:99px;background:var(--line);overflow:hidden}
-.bar i{display:block;height:100%;width:0;background:var(--brand);transition:width .25s}
-
-/* form */
-.field{display:flex;flex-direction:column;gap:8px}
-.field>label,.field>.lab{font-weight:700;font-size:15px}
-.req{color:var(--danger)}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{position:relative}
-.chip input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
-.chip span{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:99px;border:1.5px solid var(--line);background:var(--surface);font-weight:500;font-size:15px}
-.chip input:checked+span{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);font-weight:700}
-.chip input:focus-visible+span{outline:3px solid var(--warn);outline-offset:2px}
-.chip.sev-h input:checked+span{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
-.input,select.input,textarea.input{width:100%;min-height:48px;padding:10px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-size:16px}
-textarea.input{min-height:130px;resize:vertical}
-.input:focus{outline:3px solid color-mix(in srgb,var(--brand) 40%,transparent);border-color:var(--brand)}
-.hint{font-size:13px;color:var(--muted)}
-.err{color:var(--danger);font-size:14px;font-weight:700;min-height:0}
-.banner{border-radius:14px;padding:12px 14px;font-size:14px;display:flex;gap:10px}
-.banner.info{background:var(--info-soft);color:var(--info)}
-.banner.warn{background:var(--warn-soft);color:var(--text)}
-.banner.danger{background:var(--danger-soft);color:var(--danger)}
-.banner b{display:block}
-.photos-actions{display:flex;gap:10px;flex-wrap:wrap}
-.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.thumb{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--surface2);border:1px solid var(--line)}
-.thumb img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
-.thumb button{position:absolute;top:4px;right:4px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:18px;cursor:pointer;line-height:1}
-.success{text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 16px}
-.success .ok-ic{width:64px;height:64px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-size:32px}
-.rid{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:800;font-size:20px;background:var(--surface2);border:1px dashed var(--line);border-radius:12px;padding:8px 16px;letter-spacing:.04em}
-
-/* admin */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center}
-.stat b{display:block;font-size:22px;line-height:1.2}
-.stat span{font-size:12px;color:var(--muted)}
-.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.list{display:flex;flex-direction:column;gap:10px}
-.item{display:flex;flex-direction:column;gap:6px;text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;cursor:pointer}
-.item-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;padding:3px 10px;border-radius:99px}
-.b-new{background:var(--warn-soft);color:var(--text)} .b-wip{background:var(--info-soft);color:var(--info)} .b-done{background:var(--brand-soft);color:var(--brand)}
-.sev{width:10px;height:10px;border-radius:50%;display:inline-block}
-.sev-낮음{background:var(--brand)} .sev-보통{background:var(--warn)} .sev-높음{background:var(--danger)}
-.item p{font-size:14.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.meta{font-size:12.5px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
-.empty{text-align:center;padding:36px 12px;color:var(--muted)}
-
-/* modal */
-.overlay{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(0px + env(safe-area-inset-bottom,0px))}
-.sheet{background:var(--bg);width:100%;max-width:640px;max-height:100%;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
-@media(min-width:720px){.overlay{align-items:center}.sheet{border-radius:22px;max-height:90%}}
-.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.kv{display:grid;grid-template-columns:92px 1fr;gap:6px 10px;font-size:14.5px}
-.kv dt{color:var(--muted);font-weight:700} .kv dd{margin:0}
-.content-box{white-space:pre-wrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-.photo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-.photo-grid img{width:100%;border-radius:12px;display:block;cursor:zoom-in;border:1px solid var(--line)}
-.lightbox{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px))}
-.lightbox img{max-width:100%;max-height:100%;border-radius:8px}
-
-/* bottom nav */
-nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);display:flex;gap:4px;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:54px;border:0;background:none;border-radius:14px;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;padding:4px 2px}
-.tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.tab[aria-selected="true"]{color:var(--brand);background:var(--brand-soft);font-weight:800}
-.tab.alert[aria-selected="false"]{color:var(--danger)}
-@media(min-width:720px){
-  nav.tabs{left:50%;right:auto;transform:translateX(-50%);width:min(560px,calc(100% - 32px));bottom:calc(16px + env(safe-area-inset-bottom,0px));border:1px solid var(--line);border-radius:22px;padding:6px;box-shadow:var(--shadow)}
-}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:#16221d;color:#fff;border-radius:99px;padding:10px 18px;font-size:14px;z-index:70;max-width:90%;text-align:center;box-shadow:var(--shadow)}
-
-/* login */
-.login{max-width:420px;margin:8vh auto 0}
-.login .card{display:flex;flex-direction:column;gap:14px;padding:22px 18px}
-.honey{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-.topbar-actions{display:flex;gap:8px}
-
-.input.pin{text-align:center;font-size:30px;letter-spacing:.45em;padding-left:calc(14px + .45em);font-weight:700}
-
-/* ---- 접수증(출력용) ---- */
-.rc-ov{z-index:55}
-.rc-sheet{max-width:680px}
-.rc-bar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
-.paper{background:#fff;color:#000;border:1px solid #cfd8d3;border-radius:6px;padding:36px 32px;font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;line-height:1.7;word-break:keep-all}
-.paper h1{font-size:28px;text-align:center;margin:0 0 6px;letter-spacing:.08em;border-bottom:3px double #000;padding-bottom:14px;color:#000}
-.rc-sub{text-align:center;margin:12px 0 26px;font-weight:700}
-.rc-row{display:grid;grid-template-columns:5.2em 1.2em 1fr;margin-bottom:14px;align-items:start}
-.rc-row b{font-weight:800}
-.rc-content{white-space:pre-wrap;min-height:9em;border:1px solid #000;padding:10px 12px;overflow-wrap:anywhere}
-.rc-opt{display:inline-flex;align-items:center;margin:0 4px;white-space:nowrap}
-.rc-sep{margin:0 4px}
-.ck{display:inline-block;width:15px;height:15px;border:1.6px solid #000;margin-right:5px;position:relative;box-sizing:border-box}
-.ck.on::after{content:"";position:absolute;left:3.5px;top:-1px;width:4px;height:9px;border:solid #000;border-width:0 2.4px 2.4px 0;transform:rotate(45deg)}
-.rc-foot{margin-top:26px;font-size:12px;color:#444;text-align:right}
-@media print{
-  @page{size:A4;margin:18mm}
-  body.printing-receipt > *:not(#receiptRoot){display:none!important}
-  #receiptRoot .noprint{display:none!important}
-  #receiptRoot .overlay{position:static;display:block;background:none;padding:0}
-  #receiptRoot .sheet{max-width:none;max-height:none;overflow:visible;padding:0;background:none;border-radius:0;box-shadow:none}
-  #receiptRoot .paper{border:none;padding:0}
-}
+const EMERGENCY = [
+  { icon:'🔥', title:'화재가 났을 때',
+    steps:['<b>"불이야!"</b> 크게 외쳐 주변에 알리고 화재경보를 누릅니다.','<b>119</b>에 신고합니다. (장소, 상황, 부상자 유무)','불이 작고 안전하다면 소화기로 초기 진화를 시도합니다. 번지면 바로 대피합니다.','<b>엘리베이터를 쓰지 말고</b> 계단으로 대피합니다. 연기가 많으면 낮은 자세로, 젖은 수건으로 코와 입을 가립니다.','문을 닫아 연기 확산을 늦추고, 집결지에서 인원을 확인합니다. 다시 건물에 들어가지 않습니다.'] },
+  { icon:'🧯', title:'소화기 사용법',
+    steps:['소화기를 불이 난 곳 가까이(약 3~5m)로 옮깁니다.','<b>안전핀</b>을 뽑습니다.','호스(노즐)를 <b>불의 아랫부분</b>으로 향합니다.','손잡이를 힘껏 움켜쥐고, <b>빗자루로 쓸듯이</b> 좌우로 뿌립니다.'],
+    note:'바람을 등지고, 퇴로(출구)를 등 뒤에 두고 사용하세요. 불이 천장까지 번졌다면 진화를 포기하고 대피하세요.' },
+  { icon:'🌐', title:'지진이 났을 때 (단계별 대피)',
+    steps:['<b>① 흔들릴 때</b>: 튼튼한 책상·탁자 아래로 들어가 <b>머리와 목</b>을 보호하고 다리를 붙잡습니다. 책상이 없으면 가방·방석으로 머리를 감싸고 몸을 낮춥니다.','유리창, 캐비닛, 조명, 복사기처럼 넘어지거나 떨어질 것에서 멀어집니다. 흔들리는 중에 서둘러 밖으로 뛰어나가지 않습니다.','<b>② 흔들림이 멈춘 뒤</b>: 전기와 가스를 차단하고 문을 열어 출구를 확보합니다.','<b>③ 대피할 때</b>: 엘리베이터를 쓰지 말고 계단으로 이동합니다. 가방 등으로 머리를 보호하고 낙하물이 있는 곳은 피합니다.','<b>④ 건물 밖에서</b>: 건물·유리창·간판·가로등에서 멀리 떨어진 넓은 곳(집결지)으로 이동해 인원을 확인하고, 안내방송과 재난문자를 따릅니다. 여진이 올 수 있으니 안전이 확인될 때까지 건물에 다시 들어가지 않습니다.'] },
+  { icon:'❤️', title:'쓰러진 사람 · 심정지 (심폐소생술)',
+    steps:['어깨를 두드리며 큰 소리로 반응을 확인합니다.','반응이 없고 호흡이 없거나 이상하면 주변 사람을 지목해 <b>119 신고</b>와 <b>AED(자동심장충격기)</b>를 요청합니다.','가슴 중앙을 <b>5~6cm 깊이, 분당 100~120회</b> 속도로 강하고 빠르게 압박합니다.','AED가 오면 전원을 켜고 음성 안내에 따릅니다. 구급대가 올 때까지 멈추지 않습니다.'],
+    note:'AED 위치는 이 페이지 위쪽 “우리 사무실 비상 정보”에서 확인하세요.' },
+  { icon:'🩹', title:'감전 · 출혈 · 화상 응급처치',
+    steps:['<b>감전</b>: 먼저 전원을 차단합니다. 전원을 끄기 전에는 맨손으로 환자를 만지지 않고, 119에 신고합니다.','<b>출혈</b>: 깨끗한 천으로 상처를 직접 세게 눌러 지혈하고, 출혈이 많으면 119에 신고합니다.','<b>화상</b>: 흐르는 시원한 물로 충분히 식히고, 물집은 터뜨리지 않습니다. 범위가 넓거나 얼굴·손이면 병원으로 갑니다.'] },
+  { icon:'💡', title:'정전이 되었을 때',
+    steps:['당황하지 말고 그 자리에서 잠시 멈춰 주변을 확인하고, 휴대폰 조명이나 손전등을 켭니다.','이동할 때는 벽이나 손잡이를 짚고 천천히 움직이며, 계단과 바닥 단차를 조심합니다.','가능하면 사용하던 PC와 기기의 작업을 저장하고 전원을 끈 뒤 플러그를 뽑아, 전기가 다시 들어올 때의 충격(서지)을 막습니다.','<b>촛불·라이터를 쓰지 않습니다.</b> 화재 위험이 큽니다.','시설·안전 담당자에게 정전 범위를 알리고 안내를 기다립니다. 엘리베이터에 타고 있었다면 아래 “엘리베이터에 갇혔을 때”를 따릅니다.','전기가 돌아오면 전열기구를 한꺼번에 켜지 않고, 타는 냄새나 이상 소리가 없는지 확인합니다.'] },
+  { icon:'🛗', title:'엘리베이터에 갇혔을 때',
+    steps:['침착하게 <b>비상(인터폰) 호출 버튼</b>을 눌러 갇힌 사실과 위치를 알립니다.','문을 억지로 열거나 천장 비상구로 나가려 하지 않습니다. 매우 위험합니다.','휴대폰이 되면 <b>119</b> 또는 건물 관리실에 건물 이름과 호기를 알립니다.','문에서 떨어져 바닥에 앉아 구조를 기다립니다. 엘리베이터는 밀폐된 상자가 아니므로 숨이 막힐까 걱정하지 않아도 됩니다.','구조대원이 오면 지시에 따라 움직입니다.'] },
+  { icon:'🫁', title:'기도가 막혔을 때 (하임리히법)',
+    steps:['말을 못 하고 목을 움켜쥐거나 얼굴이 파랗게 변하면 기도가 막힌 것입니다. 주변 사람에게 <b>119 신고</b>를 요청합니다.','기침을 할 수 있으면 계속 기침하도록 격려하며 지켜봅니다.','기침도 말도 못 하면 환자 뒤에서 감싸 안고, 한 손은 주먹을 쥐어 <b>배꼽 위·명치 아래</b>에 대고 다른 손으로 감싼 뒤, 안쪽 위쪽으로 힘차게 밀어 올립니다(복부 밀어내기).','이물질이 나오거나 의식을 잃을 때까지 반복합니다.','의식을 잃으면 바닥에 눕히고 119 신고 후 <b>심폐소생술</b>을 시작합니다.'],
+    note:'임신부와 비만인 사람은 가슴 중앙을 밀어 올리고, 영아는 방법이 달라 119 상황실의 안내를 따릅니다.' },
+  { icon:'🧠', title:'뇌졸중이 의심될 때 (FAST)',
+    steps:['<b>F(얼굴)</b>: 웃어 보라고 했을 때 한쪽 입꼬리가 처지거나 얼굴이 비뚤어지는지 봅니다.','<b>A(팔)</b>: 두 팔을 앞으로 들었을 때 한쪽이 힘없이 내려오는지 봅니다.','<b>S(말)</b>: 말이 어눌하거나 엉뚱한 말을 하는지 봅니다.','<b>T(시간)</b>: 하나라도 해당하면 <b>즉시 119</b>에 신고하고, 증상이 시작된 시각을 기억해 구급대에 알립니다.','환자를 편안히 눕히고 옷을 느슨하게 합니다. 음식·물·약을 먹이지 않고, 스스로 운전해 가지 않게 합니다.'] },
+  { icon:'🥵', title:'열사병 · 온열질환이 의심될 때',
+    steps:['두통·어지러움·구토·근육 경련·심한 피로가 있으면 즉시 일을 멈추고 <b>시원한 곳</b>으로 옮깁니다.','옷을 느슨하게 풀고, 물수건이나 찬 물로 몸을 적셔 부채질합니다. 목·겨드랑이·사타구니에 찬 수건을 대면 도움이 됩니다.','의식이 또렷하면 시원한 물이나 이온음료를 조금씩 마시게 합니다.','의식이 흐리거나 반응이 이상하고, 체온이 매우 높으며 땀이 나지 않고 피부가 뜨겁고 붉다면 <b>열사병 의심 — 즉시 119</b>에 신고합니다. 의식이 없는 사람에게는 음료를 먹이지 않습니다.','구급대가 올 때까지 계속 몸을 식힙니다.'] },
+  { icon:'📋', title:'사고가 발생한 뒤에는',
+    steps:['위험이 계속되는지 확인하고, 다친 사람을 먼저 보호합니다. 필요하면 <b>119</b>에 신고합니다.','2차 사고가 없도록 현장을 안전하게 통제하되 사진 등 <b>현장 기록</b>을 남깁니다.','상급자·안전 담당자에게 즉시 보고합니다.','이 사이트의 <b>안전신문고</b>에 사고 또는 아차사고 내용을 남겨 재발을 막습니다.'] }
+];
 
 
-/* ---- 공지사항 ---- */
-.notice-card{display:flex;flex-direction:column;gap:12px}
-.notice-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.notice-head h2{margin:0;font-size:20px}
-.mascot-wrap{flex:none;background:#fff;border:1px solid var(--line);border-radius:18px;padding:6px 10px}
-.mascot{display:block;width:112px;height:auto}
-.notice-list{display:flex;flex-direction:column;gap:8px}
-details.notice-item{background:var(--surface2);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-details.notice-item.pinned{border-color:var(--warn);background:var(--warn-soft)}
-details.notice-item summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;min-height:48px;font-weight:700}
-details.notice-item summary::-webkit-details-marker{display:none}
-.n-title{min-width:0;overflow-wrap:anywhere}
-.n-date{flex:none;font-size:12.5px;font-weight:400;color:var(--muted)}
-.npin{display:inline-block;font-size:12px;font-weight:800;background:var(--warn);color:var(--warn-ink);border-radius:99px;padding:1px 8px;margin-right:4px}
-.n-body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px}
-.n-prev{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 10px;font-size:14.5px}
+/* ===================== 친환경 (사무실 · 홍보물 · 행사) ===================== */
+const ECO_TOP = [
+  '자리를 비울 때는 모니터를 끄고, 퇴근 전에는 멀티탭 스위치를 끕니다.',
+  '냉난방은 기관의 적정 온도 지침을 지키고, 창문과 문을 닫고 사용합니다.',
+  '꼭 필요한 문서만 양면·모아찍기로 인쇄하고, 가능하면 화면으로 공유합니다.',
+  '개인 컵·텀블러를 쓰고, 일회용품은 줄입니다.',
+  '재활용품은 비우고 헹궈서 분리배출 표시대로 버립니다.',
+  '폐건전지·보조배터리·형광등은 전용 수거함에 따로 모읍니다.',
+  '가까운 층은 계단으로, 출장·회의는 화상회의로 대체할 수 있는지 먼저 봅니다.',
+  '물이 새거나 조명이 계속 켜진 곳, 넘치는 쓰레기통을 보면 안전신문고로 알립니다.'
+];
 
-/* ---- 오늘의 안전 날씨 ---- */
-.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.wx{--wx-bg:var(--surface2);--wx-line:var(--line);display:grid;grid-template-columns:1fr auto;grid-template-areas:"head mascot" "level mascot" "note note" "tip tip";gap:8px 12px;align-items:center;border:2px solid var(--wx-line);background:var(--wx-bg);border-radius:22px;padding:16px;box-shadow:var(--shadow)}
-.wx-clear{--wx-bg:var(--brand-soft);--wx-line:var(--brand)}
-.wx-cloudy{--wx-bg:var(--warn-soft);--wx-line:var(--warn)}
-.wx-danger{--wx-bg:var(--danger-soft);--wx-line:var(--danger)}
-.wx-head{grid-area:head;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.wx-head h2{margin:0;font-size:17px}
-.wx-date{font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:1px 9px}
-.wx-level{grid-area:level;display:flex;align-items:center;gap:12px;min-width:0}
-.wx-ico{flex:none;width:56px;height:56px}
-.wx-ico svg{width:100%;height:100%;display:block}
-.wx-none .wx-ico{opacity:.45;filter:grayscale(1)}
-.wx-title{display:flex;flex-direction:column;line-height:1.2;min-width:0}
-.wx-title span{font-size:15px;color:var(--muted);font-weight:700}
-.wx-title b{font-size:22px;font-weight:800;word-break:keep-all}
-.wx .mascot-wrap{grid-area:mascot;align-self:center}
-.wx .mascot-wrap{padding:4px 6px}
-.wx .mascot{width:84px}
-.wx-note{grid-area:note;margin:0;font-size:13px;color:var(--muted)}
-.wx-tip{grid-area:tip;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-.wx-tip b{display:block;font-size:12px;letter-spacing:.06em;color:var(--muted)}
-.wx-tip p{margin:2px 0 0;font-weight:700}
-/* 퀵 메뉴 */
-.q-title{margin:6px 0 0;font-size:17px}
-.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.qtile{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px 12px;background:var(--surface);border:1.5px solid var(--line);border-radius:18px;cursor:pointer;color:inherit;font:inherit;text-align:center;min-height:44px}
-.qtile svg{width:56px;height:56px;display:block}
-.qtile b{font-size:15px}
-.qtile span{font-size:12px;color:var(--muted)}
-.qtile.q-emg{border-color:var(--danger);background:var(--danger-soft)}
-.qtile:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
-/* 관리자: 안전 날씨 선택 */
-.wx-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.wx-opt{position:relative;display:block;cursor:pointer}
-.wx-opt input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
-.wx-box{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border:2px solid var(--line);border-radius:16px;background:var(--surface)}
-.wx-box svg{width:52px;height:52px;display:block}
-.wx-box b{font-size:15px}
-.wx-opt.wx-clear input:checked + .wx-box{border-color:var(--brand);background:var(--brand-soft)}
-.wx-opt.wx-cloudy input:checked + .wx-box{border-color:var(--warn);background:var(--warn-soft)}
-.wx-opt.wx-danger input:checked + .wx-box{border-color:var(--danger);background:var(--danger-soft)}
-.wx-opt input:focus-visible + .wx-box{outline:3px solid var(--warn);outline-offset:2px}
+const ECO_SELFCHECK = [
+  '자리를 오래 비울 때 모니터와 불필요한 기기 전원을 끈다(절전)',
+  '퇴근할 때 멀티탭 스위치를 끄고 조명·냉난방 상태를 확인한다',
+  '꼭 필요한 문서만 양면·모아찍기로 인쇄하고 이면지·전자문서를 활용한다',
+  '개인 컵·텀블러를 쓰고 일회용품 사용을 줄인다',
+  '재활용품은 비우고 헹궈서 분리배출 표시대로 버린다',
+  '폐건전지·형광등·보조배터리를 일반 쓰레기통에 버리지 않는다',
+  '물이 새거나 조명이 계속 켜진 곳을 보면 알린다',
+  '가까운 층은 계단을 이용하고, 출장·회의는 화상회의로 대체할 수 있는지 먼저 본다'
+];
 
-/* 넓은 화면(가로 440px 이상)에서는 안전 날씨 카드를 더 크게 */
-@media (min-width:440px){
-  .wx-ico{width:76px;height:76px}
-  .wx-title b{font-size:30px}
-  .wx .mascot-wrap{padding:6px 10px}
-  .wx .mascot{width:116px}
-}
+const ECO = [
+  { icon:'🌱', title:'에너지 절약 (전기 · 조명 · 냉난방)',
+    intro:'절약 습관은 전기요금과 탄소 배출을 줄일 뿐 아니라, 과열·화재 같은 <b>전기 사고 예방</b>에도 도움이 됩니다.',
+    do:['자리를 오래 비울 때(점심·회의·퇴근)는 모니터를 끄거나 절전 모드로 두고, PC의 절전·자동 꺼짐 시간을 짧게 설정합니다.','사용하지 않는 기기는 <b>멀티탭 스위치를 끄거나 플러그를 뽑아</b> 대기전력을 줄입니다. 플러그는 전선이 아니라 몸체를 잡고 뽑습니다.','냉난방은 기관의 적정 온도 지침(예: 여름 26℃ 이상, 겨울 20℃ 이하)을 확인해 지키고, 사용 중에는 창문·문을 닫습니다.','사람이 없는 회의실·탕비실·화장실·복도의 조명은 끄고, 낮에는 블라인드를 조절해 자연광을 활용합니다.','복합기·프린터·정수기 등 공용 기기는 절전 모드를 쓰고, 퇴근 때 전원 상태를 확인합니다.','냉난방기와 환기구 앞에 물건을 쌓지 않고, 필터 청소가 필요하면 시설 담당자에게 알립니다.','가까운 층은 계단을 이용합니다. 이때 손잡이를 잡고 휴대폰은 보지 않습니다.'],
+    dont:['사용하지 않는 전열기구·충전기를 계속 꽂아 두기','절약을 이유로 멀티탭 위에 멀티탭 연결하기','냉난방 중 창문을 열어둔 채 자리 비우기'],
+    note:'기관의 에너지 절약·탄소중립 방침이 따로 있으면 그 기준이 우선합니다.' },
+  { icon:'💧', title:'물 절약 · 탕비실 위생',
+    do:['손이나 컵을 씻을 때 물을 틀어 둔 채 자리를 비우지 않습니다.','수도꼭지·변기·정수기에서 물이 새거나 계속 흐르면 바로 시설 담당자에게 알립니다. 누수는 <b>미끄러짐·누전 사고</b>의 원인이 됩니다.','마시다 남은 음료와 커피 찌꺼기는 싱크대가 아니라 정해진 곳에 버려 배수구 막힘과 바닥 젖음을 막습니다.','바닥이 젖었으면 닦고 <b>미끄럼 주의 표지</b>를 세웁니다.'],
+    dont:['기름·음식물 찌꺼기를 싱크대 배수구에 버리기','물이 새는 곳을 알면서 그냥 두기'] },
+  { icon:'📄', title:'종이 · 일회용품 줄이기',
+    do:['결재·공유는 가능하면 화면으로 하고, 인쇄는 꼭 필요한 것만 <b>양면·모아찍기</b>로 합니다.','이면지는 <b>개인정보·기밀이 없는 것만</b> 다시 쓰고, 개인정보가 있는 문서는 파쇄합니다.','개인 컵·텀블러·개인 식기를 쓰고, 회의 때 생수 대신 정수기나 다회용 물병을 씁니다.','펜·파일철 같은 사무용품은 다 쓸 때까지 쓰고, 쓰지 않는 물품은 공유·재사용합니다.','택배 상자·완충재 중 다시 쓸 수 있는 것은 모아 재사용합니다.'],
+    dont:['확인 없이 대량 인쇄하기','일회용 컵을 한 번 쓰고 버리기','쓸 수 있는 비품이 있는데 새로 주문하기'] },
+  { icon:'♻️', title:'분리배출 (재활용품 올바르게 버리기)',
+    intro:'올바른 분리배출은 재활용의 질을 높이고, 베임·화재 같은 사고도 막습니다.',
+    do:['종이·플라스틱·캔·유리·비닐·일반쓰레기를 <b>분리수거함 표시대로</b> 나누어 버립니다.','용기는 내용물을 비우고 가볍게 헹궈서 내놓습니다.','<b>투명 페트병</b>은 라벨을 떼고 뚜껑을 닫아 따로 모읍니다(기관·지자체 기준에 따릅니다).','종이류는 테이프·스테이플러·비닐 코팅 같은 이물질을 가능한 한 떼어 냅니다. 택배 상자는 테이프와 송장을 제거합니다.','음식물이 묻은 종이·오염된 비닐처럼 재활용이 어려운 것은 일반쓰레기로 버립니다.','음식물 쓰레기는 정해진 방법과 장소로 배출하고, 탕비실에 오래 두지 않습니다.'],
+    dont:['음료나 음식물이 남은 채 재활용함에 넣기','재질이 다른 것을 한 봉투에 섞어 버리기','분리수거함 밖에 쌓아 두기'],
+    note:'분리배출 기준은 지자체와 건물 관리 규정에 따라 조금씩 다릅니다. 헷갈릴 때는 안전·시설 담당 부서의 안내를 따르세요.' },
+  { icon:'⚠️', title:'폐기물 안전 (특수 폐기물)',
+    intro:'배터리·유리·화학제품은 잘못 버리면 <b>화재와 부상</b>으로 이어질 수 있어 따로 처리합니다.',
+    do:['폐건전지·형광등·보조배터리는 일반 쓰레기통에 넣지 않고 <b>전용 수거함</b>에 모읍니다. 형광등은 깨지지 않게 다룹니다.','부풀거나 손상된 배터리는 사용·충전을 멈추고 단자에 테이프를 붙여 따로 두고, 시설 담당자에게 알립니다.','깨진 유리·컵·날카로운 물건은 맨손으로 줍지 않고, 두껍게 싸서 겉에 <b>“깨진 유리”</b> 등으로 표시한 뒤 정해진 방법으로 버립니다.','토너·잉크 카트리지는 기관의 회수 절차를 따릅니다.','소화기, 전자제품, 가구 같은 대형·특수 물품은 임의로 버리지 않고 시설 담당자를 통해 처리합니다. 점검 기한이 지난 소화기도 마찬가지입니다.','스프레이·세정제·약품 용기는 내용물을 다 쓴 뒤 표시된 배출 방법에 따르고, 남은 액체를 싱크대나 화장실에 버리지 않습니다.'],
+    dont:['배터리·스프레이 캔·라이터를 일반 쓰레기통에 버리기','깨진 유리를 맨손으로 줍거나 그대로 쓰레기통에 넣기','소화기를 임의로 처분하기'] },
+  { icon:'🚌', title:'친환경 이동 · 출장',
+    do:['출장·회의는 화상회의나 온라인 공유로 대체할 수 있는지 먼저 확인합니다.','이동은 대중교통·카풀·도보·자전거를 우선 고려하고, 자전거는 안전모를 씁니다.','차량은 대기 중 시동을 끄고 <b>공회전을 하지 않습니다.</b>','물품·장비는 모아서 한 번에 옮겨 이동 횟수를 줄입니다.','이동 중에는 휴대폰을 보지 않습니다.'],
+    dont:['짧은 거리를 시동을 켠 채 기다리기','안전모 없이 자전거 타기'] },
+  { icon:'📣', title:'친환경 홍보물 · 행사 (홍보미디어실)',
+    do:['현수막·배너·포스터·굿즈는 필요한 만큼만 제작합니다.','날짜가 들어가지 않는 디자인으로 만들어 <b>다음 행사에 다시 쓸 수 있게</b> 합니다.','가능하면 재활용하기 쉬운 단일 소재를 고르고, 비닐 코팅·혼합 소재는 줄입니다.','인쇄물 대신 QR코드와 온라인 배포를 활용합니다(이 사이트처럼).','행사에서는 다회용 컵·식기를 쓰고, 기념품은 꼭 필요한 만큼만 준비합니다.','철거한 현수막·배너·세트는 재사용·보관·기증이 가능한지 먼저 확인하고, 폐기물은 분리해서 반출합니다.'],
+    dont:['행사 후 쓸 수 있는 물품을 한꺼번에 버리기','필요 이상으로 많이 인쇄·제작하기'],
+    note:'촬영 현장의 친환경 수칙은 아래 “촬영현장 친환경”에서 볼 수 있습니다.' }
+];
 
-/* ===== 촬영안전 추가: 넓은 바로가기 버튼 (홈·바로가기 화면) ===== */
-.qwide{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;background:var(--surface);border:1.5px solid var(--line);border-radius:18px;cursor:pointer;color:inherit;font:inherit;text-align:left;min-height:44px}
-.qwide svg{width:48px;height:48px;flex:none;display:block}
-.qwide .qw-txt{display:flex;flex-direction:column;min-width:0;flex:1}
-.qwide .qw-txt b{font-size:15px}
-.qwide .qw-txt span{font-size:12px;color:var(--muted)}
-.qwide i{font-style:normal;font-size:22px;color:var(--muted);flex:none}
-.qwide:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+/* ===================== 이달의 친환경 실천 챌린지 (1월~12월, 매달 자동으로 바뀝니다) ===================== */
+const ECO_CHALLENGES = [
+  { m:1,  icon:'🧣', title:'20℃ 난방 · 한 겹 더 챌린지', desc:'난방 온도를 기관 지침(예: 20℃ 이하)에 맞추고, 옷을 한 겹 더 입어 에너지를 아껴요.',
+    actions:['무릎담요·겉옷을 한 겹 더 챙기고 난방 온도를 올리지 않기','블라인드·커튼으로 찬 기운을 막기','퇴근할 때 난방기·전열기구 전원과 플러그 확인하기'] },
+  { m:2,  icon:'📄', title:'종이 없는 한 달 챌린지', desc:'결재와 회의 자료를 화면으로 공유하고, 인쇄는 꼭 필요한 것만 해요.',
+    actions:['인쇄하기 전에 “화면으로 볼 수 없을까?” 먼저 묻기','꼭 인쇄할 때는 양면·모아찍기 사용하기','개인정보가 없는 이면지를 모아 메모지로 다시 쓰기'] },
+  { m:3,  icon:'☕', title:'내 컵 챌린지', desc:'일회용 컵 대신 텀블러와 개인 컵을 써요. 쓰레기도 줄고 탕비실 바닥도 깨끗해져요.',
+    actions:['텀블러·개인 컵을 자리에 두고 쓰기','회의 때 일회용 컵 대신 다회용 컵 쓰기','컵을 씻을 때 물을 틀어 놓고 자리를 비우지 않기'] },
+  { m:4,  icon:'🌍', title:'지구의 날 소등 · 플러그 뽑기 챌린지', desc:'4월 22일 지구의 날을 계기로, 쓰지 않는 불과 기기를 끄고 대기전력을 줄여요.',
+    actions:['점심시간에 사무실 조명을 끄기','쓰지 않는 충전기·기기 플러그 뽑기','퇴근 전 멀티탭 스위치를 끄기'] },
+  { m:5,  icon:'♻️', title:'분리배출 제대로 챌린지', desc:'용기를 비우고 헹궈서 분리배출 표시대로 버려요. 올바른 분리배출이 재활용의 시작이에요.',
+    actions:['용기는 비우고 헹궈서 내놓기','투명 페트병은 라벨을 떼어 따로 모으기','헷갈리는 품목은 분리배출 안내를 확인하고 버리기'] },
+  { m:6,  icon:'🌱', title:'환경의 날 쓰레기 줄이기 챌린지', desc:'6월 5일 환경의 날을 계기로, 일주일 동안 일회용품과 쓰레기를 줄여 봐요.',
+    actions:['일회용 컵·수저·비닐 사용 줄이기','점심은 다회용 용기에 담아 오거나 남기지 않기','내 자리 쓰레기통에 쌓이는 쓰레기 종류 살펴보기'] },
+  { m:7,  icon:'🧊', title:'냉방 26℃ 챌린지', desc:'냉방 온도를 기관 지침(예: 26℃ 이상)에 맞추고 선풍기를 함께 써서 전력을 아껴요.',
+    actions:['냉방 중에는 창문·문을 닫기','블라인드를 내려 햇빛 열을 막기','자리를 비울 때 모니터와 개인 선풍기 끄기'] },
+  { m:8,  icon:'💧', title:'물 절약 챌린지', desc:'작은 물 낭비를 줄이고 새는 곳을 찾아 알려요. 누수는 미끄럼·누전 사고의 원인이기도 해요.',
+    actions:['손·컵을 씻을 때 물을 틀어 두지 않기','수도꼭지·변기에서 물이 새는 곳을 보면 바로 알리기','마시다 남은 물은 버리지 않고 화분이나 청소에 쓰기'] },
+  { m:9,  icon:'🚶', title:'계단 · 대중교통 챌린지', desc:'9월 22일 세계 차 없는 날을 계기로, 가까운 층은 계단으로, 이동은 대중교통으로 해요.',
+    actions:['3개 층 이내는 계단 이용하기(손잡이 잡고 휴대폰은 넣어 두기)','출장·이동은 대중교통·카풀·도보 먼저 생각하기','차를 기다릴 때 시동을 끄고 공회전하지 않기'] },
+  { m:10, icon:'🍽️', title:'탕비실 낭비 줄이기 챌린지', desc:'먹을 만큼만 준비하고, 오래된 음식은 정리해서 음식물 쓰레기를 줄여요.',
+    actions:['간식·음료는 먹을 만큼만 꺼내기','공용 냉장고의 유통기한 지난 음식 정리하기','남은 음료는 싱크대 대신 정해진 곳에 버리기'] },
+  { m:11, icon:'🔋', title:'폐건전지 · 폐배터리 모으기 챌린지', desc:'일반 쓰레기통에 버리면 위험한 배터리를 전용 수거함에 모아요. 화재 예방에도 큰 도움이 돼요.',
+    actions:['폐건전지·보조배터리를 서랍에 모아 전용 수거함에 넣기','부풀거나 손상된 배터리는 쓰지 말고 담당자에게 알리기','형광등은 깨지지 않게 다뤄 전용 수거함에 버리기'] },
+  { m:12, icon:'🎁', title:'연말 행사 친환경 챌린지', desc:'송년회와 행사에서 다회용품을 쓰고 포장과 기념품을 줄여요.',
+    actions:['행사에서 다회용 컵·식기 쓰기','선물·기념품은 꼭 필요한 만큼만 준비하고 포장 줄이기','현수막·장식은 다음 행사에 다시 쓸 수 있게 보관하기'] }
+];
 
+/* ===================== 이달의 안전·친환경 캠페인 (안전 주제 · 매달 자동, 관리자가 직접 바꿀 수도 있음) ===================== */
+const SAFETY_CAMPAIGNS = [
+  { m:1,  title:'겨울철 빙판길 낙상 예방', body:'출입구와 계단의 결빙을 확인하고, 걸을 때는 손을 주머니에서 빼고 휴대폰을 보지 않아요.', go:'rules' },
+  { m:2,  title:'난방기구 · 전기 화재 예방', body:'히터 주변에 종이·박스를 치우고, 퇴근 때 전열기구 플러그와 멀티탭 스위치를 확인해요.', go:'rules' },
+  { m:3,  title:'봄철 건조기 화재 · 비상구 점검', body:'건조한 날씨에는 작은 불씨도 커집니다. 소화기 압력과 비상구 앞 물건을 점검해요.', go:'emergency' },
+  { m:4,  title:'안전점검의 날 · 내 자리 안전 점검', body:'매월 4일은 안전점검의 날이에요. 내 자리 셀프체크로 전선·멀티탭·통로를 점검해요.', go:'rules' },
+  { m:5,  title:'올바른 자세와 근골격계 예방', body:'모니터 높이와 의자를 맞추고, 1시간마다 일어나 스트레칭해요. 행사·촬영이 많은 달에는 짐 옮기기도 주의해요.', go:'rules' },
+  { m:6,  title:'장마철 감전 · 누전 예방', body:'젖은 손으로 전기기기를 만지지 말고, 누수 근처 멀티탭은 전원을 끄고 옮겨요.', go:'rules' },
+  { m:7,  title:'폭염 · 온열질환 예방', body:'물을 자주 마시고 그늘에서 쉬어요. 어지러움·구토가 있으면 바로 쉬고, 심하면 119에 신고해요.', go:'emergency' },
+  { m:8,  title:'폭염 속 촬영 · 야외 작업 안전', body:'한낮 촬영은 휴식 시간과 그늘, 물을 먼저 준비하고 장비를 차 안에 두지 않아요.', go:'shoot' },
+  { m:9,  title:'태풍 · 집중호우 대비', body:'재난문자를 확인하고 야외 장비는 고정하거나 눕혀요. 침수·누전 위험 구역에는 가지 않아요.', go:'emergency' },
+  { m:10, title:'화재 예방 · 소방 대피 점검', body:'소화기 위치와 사용법, 비상구·집결지를 다시 확인하고 대피 경로를 걸어 봐요.', go:'emergency' },
+  { m:11, title:'소방의 날 · 소화기와 대피 요령', body:'11월 9일은 소방의 날이에요. 불이 났을 때 119 신고, 초기 진화, 계단 대피 순서를 익혀요.', go:'emergency' },
+  { m:12, title:'연말 행사 · 한파 안전', body:'행사 때 통로와 비상구를 막지 않고, 한파 속 빙판 낙상과 난방기구 화재에 주의해요.', go:'rules' }
+];
 
-/* ===== 페이지 머리말의 안전제일 캐릭터 (안전수칙·비상대응·바로가기·안전신문고·촬영안전) ===== */
-.page-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.page-head > div:first-child{min-width:0;flex:1}
-.pg-mascot-wrap{flex:none;background:#fff;border:1px solid var(--line);border-radius:18px;padding:6px 8px}
-.pg-mascot{display:block;width:120px;height:auto}
-@media (max-width:400px){ .pg-mascot{width:92px} }
-
-/* 친환경 항목의 캐릭터 그림 */
-.eco-art{display:block;width:fit-content;margin:0 auto 10px}
-.eco-art .pg-mascot{width:150px}
-@media (max-width:400px){ .eco-art .pg-mascot{width:130px} }
-
-/* 안전 서비스 바로가기 6칸 */
-.quick .qtile{text-decoration:none;justify-content:flex-start}
-.quick .qtile b{line-height:1.25;word-break:keep-all}
-
-/* =====================================================================
-   기능 추가: 화면 설정(글자 크기·고대비) · 전체 검색 · 퀴즈 · 이달의 캠페인/챌린지 · 접수번호 조회 · 관리자 통계
-   ===================================================================== */
-
-/* ---- 헤더 버튼(검색·화면 설정·밝기) ---- */
-.top-actions{display:flex;align-items:center;gap:6px;flex:none}
-.top-actions .icon-btn{width:40px;height:40px}
-.a11y-ic{font-weight:800;font-size:16px;line-height:1}
-@media (max-width:400px){ .top-actions{gap:4px} .top-actions .icon-btn{width:37px;height:37px;border-radius:10px} .brand-name{font-size:14px} }
-
-/* ---- 글자 크기 (화면 전체를 비율로 키웁니다) ---- */
-html[data-fs="1"] body{zoom:1.15}
-html[data-fs="2"] body{zoom:1.3}
-
-/* ---- 고대비 모드: 글자·배경 대비를 높이고 테두리를 굵게 ---- */
-:root[data-contrast="high"]{
-  --bg:#ffffff; --surface:#ffffff; --surface2:#f1f1f1; --text:#000000; --muted:#1f1f1f; --line:#000000;
-  --brand:#00573c; --brand-ink:#ffffff; --brand-soft:#dff3e9; --hero-a:#00573c; --hero-b:#003b29;
-  --warn:#ffd400; --warn-ink:#000000; --warn-soft:#fff3b0; --danger:#b00020; --danger-soft:#ffe3e6; --info:#003a8c; --info-soft:#dce8ff;
-  --shadow:none;
-}
-:root[data-contrast="high"][data-theme="dark"]{
-  --bg:#000000; --surface:#000000; --surface2:#141414; --text:#ffffff; --muted:#f0f0f0; --line:#ffffff;
-  --brand:#ffd400; --brand-ink:#000000; --brand-soft:#2b2500; --hero-a:#000000; --hero-b:#000000;
-  --warn:#ffd400; --warn-ink:#000000; --warn-soft:#2b2500; --danger:#ff8a80; --danger-soft:#3a0a0a; --info:#9cc4ff; --info-soft:#0a1f3d;
-}
-@media (prefers-color-scheme: dark){
-  :root[data-contrast="high"]:not([data-theme="light"]){
-    --bg:#000000; --surface:#000000; --surface2:#141414; --text:#ffffff; --muted:#f0f0f0; --line:#ffffff;
-    --brand:#ffd400; --brand-ink:#000000; --brand-soft:#2b2500; --hero-a:#000000; --hero-b:#000000;
-    --warn:#ffd400; --warn-ink:#000000; --warn-soft:#2b2500; --danger:#ff8a80; --danger-soft:#3a0a0a; --info:#9cc4ff; --info-soft:#0a1f3d;
-  }
-}
-:root[data-contrast="high"] .card, :root[data-contrast="high"] .qtile, :root[data-contrast="high"] .stat, :root[data-contrast="high"] details.acc,
-:root[data-contrast="high"] .rules10 li, :root[data-contrast="high"] .tabs, :root[data-contrast="high"] .icon-btn, :root[data-contrast="high"] .input,
-:root[data-contrast="high"] .pg-mascot-wrap, :root[data-contrast="high"] .sh-card, :root[data-contrast="high"] .sh-item, :root[data-contrast="high"] details.sh-acc{border-width:2px}
-:root[data-contrast="high"] a:not(.btn):not(.qtile):not(.sh-item):not(.sh-commonlink):not(.sh-subnav a){text-decoration:underline}
-:root[data-contrast="high"] .tab[aria-selected="true"]{outline:2px solid var(--text);outline-offset:-2px}
-:root[data-contrast="high"] :focus-visible{outline:4px solid var(--warn);outline-offset:2px}
-
-/* ---- 바로가기 화면 아래 버튼 ---- */
-.menu-more{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
-/* ---- 접수번호로 처리 결과 조회 ---- */
-details.lookup{padding:0;overflow:hidden}
-details.lookup > summary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:10px}
-details.lookup > summary::-webkit-details-marker{display:none}
-details.lookup > summary::after{content:"＋";color:var(--muted);font-weight:900}
-details.lookup[open] > summary::after{content:"－"}
-.lk-body{padding:0 16px 16px;display:flex;flex-direction:column;gap:10px}
-.lk-row{display:flex;gap:8px}
-.lk-row .input{flex:1;text-transform:uppercase;letter-spacing:.04em}
-.lk-card{border:1.5px solid var(--line);border-radius:14px;padding:14px;background:var(--surface2);display:flex;flex-direction:column;gap:10px}
-.lk-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.lk-steps{list-style:none;padding:0;margin:0;display:flex;gap:6px}
-.lk-steps li{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12.5px;color:var(--muted);position:relative}
-.lk-steps li i{font-style:normal;width:28px;height:28px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;background:var(--surface)}
-.lk-steps li.done i,.lk-steps li.now i{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
-.lk-steps li.now{color:var(--text);font-weight:800}
-.lk-reply{background:var(--surface);border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px}
-.lk-reply p{margin:4px 0 0;white-space:pre-wrap}
-
-/* ---- 전체 검색 ---- */
-.s-res{display:flex;flex-direction:column;gap:8px}
-.s-item{display:flex;flex-direction:column;gap:3px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;color:inherit;font:inherit}
-.s-item:hover{border-color:var(--brand)}
-.s-sec{font-size:11.5px;font-weight:800;color:var(--brand);letter-spacing:.02em}
-.s-snip{font-size:13.5px;color:var(--muted);line-height:1.5}
-.s-item mark,.s-snip mark{background:var(--warn);color:var(--warn-ink);border-radius:3px;padding:0 2px}
-.s-chip{cursor:pointer}
-
-/* ---- 퀴즈 ---- */
-.qz-stats{grid-template-columns:repeat(3,1fr)}
-.quiz-card{display:flex;flex-direction:column;gap:10px}
-.qz-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-.qz-head h2{margin:0;font-size:18px}
-.qz-tag{align-self:flex-start;font-size:12px;font-weight:800;padding:2px 10px;border-radius:99px;background:var(--brand-soft);color:var(--brand)}
-.qz-q{font-size:17px;font-weight:700;line-height:1.5;margin:0}
-.qz-opts{display:flex;flex-direction:column;gap:8px}
-.qz-opt{display:flex;align-items:flex-start;gap:10px;text-align:left;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:11px 12px;font:inherit;color:inherit;cursor:pointer;min-height:48px}
-.qz-opt:hover:not(:disabled){border-color:var(--brand)}
-.qz-mark{flex:none;width:26px;height:26px;border-radius:50%;background:var(--surface2);border:1.5px solid var(--line);display:grid;place-items:center;font-size:13px;font-weight:800}
-.qz-opt.ok{border-color:var(--brand);background:var(--brand-soft)}
-.qz-opt.ok .qz-mark{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
-.qz-opt.no{border-color:var(--danger);background:var(--danger-soft)}
-.qz-opt.no .qz-mark{background:var(--danger);border-color:var(--danger);color:#fff}
-.qz-opt.dim{opacity:.55}
-.qz-opt:disabled{cursor:default}
-.qz-res{border-radius:14px;padding:12px 14px;line-height:1.6}
-.qz-res.ok{background:var(--brand-soft)}
-.qz-res.no{background:var(--danger-soft)}
-.qz-res p{margin:6px 0 0}
-.page-head .bar{margin-top:8px}
-
-/* ---- 이달의 안전·친환경 캠페인 / 친환경 챌린지 ---- */
-.camp-card{display:flex;flex-direction:column;gap:12px}
-.camp-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.camp-head h2,.camp-head h3{margin:0;font-size:17px}
-.camp-month{flex:none;font-size:13px;font-weight:800;padding:3px 12px;border-radius:99px;background:var(--brand);color:var(--brand-ink)}
-.camp-row{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface2)}
-.camp-row.safe{border-left:6px solid var(--warn)}
-.camp-row.eco{border-left:6px solid var(--brand)}
-.camp-pill{flex:none;font-size:12px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--surface);border:1.5px solid var(--line)}
-.camp-row b{display:block;line-height:1.4}
-.camp-row p{margin:4px 0 0;color:var(--muted);font-size:14px;line-height:1.55}
-.camp-go{margin-top:6px;border:0;background:none;color:var(--brand);font-weight:800;font:inherit;font-weight:800;cursor:pointer;padding:4px 0}
-.eco-ch{display:flex;flex-direction:column;gap:10px;border-top:6px solid var(--brand)}
-.eco-ch.all{background:var(--brand-soft)}
-.eco-ch-title{display:flex;align-items:center;gap:12px}
-.eco-ch-ic{font-size:34px;line-height:1;flex:none}
-.eco-ch-title b{display:block;line-height:1.4}
-
-/* ---- 관리자: 통계 · 월간 보고서 ---- */
-.st-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.st-toolbar select{max-width:200px}
-.st-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.st-kpi .stat small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
-.st-bars{display:flex;flex-direction:column;gap:7px}
-.st-row{display:grid;grid-template-columns:92px 1fr 44px;gap:8px;align-items:center;font-size:13.5px}
-.st-row span.l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.st-row .tr{height:14px;background:var(--line);border-radius:99px;overflow:hidden}
-.st-row .tr i{display:block;height:100%;background:var(--brand);border-radius:99px}
-.st-row .tr i.warn{background:var(--warn)}
-.st-row .tr i.danger{background:var(--danger)}
-.st-row b{text-align:right;font-variant-numeric:tabular-nums}
-.st-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media (max-width:560px){ .st-kpi{grid-template-columns:repeat(2,1fr)} .st-cols{grid-template-columns:1fr} }
-.st-month{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:6px}
-.st-month div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%;font-size:11px;color:var(--muted)}
-.st-month div i{display:block;width:100%;background:var(--brand);border-radius:6px 6px 0 0;min-height:2px}
-.st-month div b{font-size:12px;color:var(--text)}
-.camp-admin textarea{min-height:70px}
-
-/* 월간 보고서(인쇄용 종이) */
-.paper.rp{padding:28px 26px;font-size:13px;line-height:1.55}
-.rp h1{font-size:21px;text-align:center;margin:0 0 4px}
-.rp .rp-sub{text-align:center;color:#444;margin:0 0 14px;font-size:12.5px}
-.rp h2{font-size:14.5px;margin:16px 0 6px;border-bottom:2px solid #000;padding-bottom:3px}
-.rp table{width:100%;border-collapse:collapse;font-size:12.5px}
-.rp th,.rp td{border:1px solid #666;padding:5px 7px;text-align:left;vertical-align:top}
-.rp th{background:#eee}
-.rp td.n,.rp th.n{text-align:right;white-space:nowrap}
-.rp .rp-note{font-size:11.5px;color:#444;margin-top:10px}
-.rp .rp-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
-.rp .rp-kpi div{border:1px solid #666;padding:7px;text-align:center}
-.rp .rp-kpi b{display:block;font-size:19px}
-@media print{ #receiptRoot .rp{padding:0} #receiptRoot .rp h2{break-after:avoid} #receiptRoot .rp table{break-inside:auto} #receiptRoot .rp tr{break-inside:avoid} }
-button.chip{background:none;border:0;padding:0;font:inherit;color:inherit}
+return { TIPS, RULES10, SELFCHECK, RULES, EMERGENCY, ECO_TOP, ECO_SELFCHECK, ECO, ECO_CHALLENGES, SAFETY_CAMPAIGNS };
+})();
