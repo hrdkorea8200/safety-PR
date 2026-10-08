@@ -4,7 +4,7 @@ const { $, $$, esc, toast, fmtDT } = window.U;
 const SB = window.SB, CONFIG = window.SITE_CONFIG;
 const STATUSES = ['접수','검토중','조치완료'];
 const CATS = ['전체','아차사고','안전사고','위험요소 발견','개선 제안'];
-const state = { reports:[], filter:{ status:'전체', cat:'전체' }, openId:null, timer:null, urls:[] };
+const state = { reports:[], filter:{ status:'전체', cat:'전체' }, openId:null, timer:null, urls:[], view:'reports', notices:[], editNotice:null, weather:null, weatherPick:null };
 const badgeCls = s => s === '조치완료' ? 'b-done' : s === '검토중' ? 'b-wip' : 'b-new';
 const root = $('#root');
 const pinMode = () => CONFIG.ADMIN_LOGIN_MODE !== 'password';
@@ -58,7 +58,7 @@ async function showDashboard(){
   if(!(await load())) return;
   renderDashboard();
   clearInterval(state.timer);
-  state.timer = setInterval(async () => { if(state.openId || document.getElementById('receiptRoot')) return; if(await load()) renderDashboard(); }, 60000);
+  state.timer = setInterval(async () => { if(state.openId || state.view !== 'reports' || document.getElementById('receiptRoot')) return; if(await load()) renderDashboard(); }, 60000);
 }
 
 function exportCsv(){
@@ -73,6 +73,8 @@ function exportCsv(){
 }
 
 function renderDashboard(){
+  if(state.view === 'notices'){ renderNoticeAdmin(); return; }
+  if(state.view === 'weather'){ renderWeatherAdmin(); return; }
   const all = state.reports;
   const cnt = s => all.filter(r => r.status === s).length;
   const f = state.filter;
@@ -87,6 +89,7 @@ function renderDashboard(){
         <button class="btn ghost" type="button" id="btnLogout">🔒 잠그기(로그아웃)</button>
       </div>
     </div>
+    ${viewSwitchHtml()}
     <div class="stats">
       <div class="stat"><b>${all.length}</b><span>전체</span></div>
       <div class="stat"><b>${cnt('접수')}</b><span>접수</span></div>
@@ -117,7 +120,142 @@ function renderDashboard(){
   $$('[data-open]', root).forEach(b => b.addEventListener('click', () => openDetail(b.dataset.open)));
   $('#btnRefresh').addEventListener('click', async () => { if(await load()){ renderDashboard(); toast('새로 불러왔습니다.'); } });
   $('#btnCsv').addEventListener('click', exportCsv);
+  bindViewSwitch();
   $('#btnLogout').addEventListener('click', () => { SB.logout(); state.reports = []; renderLogin('로그아웃되었습니다.'); });
+}
+
+/* ===================== 공지사항 관리 ===================== */
+function viewSwitchHtml(){
+  return `<div class="filters" id="viewSw">${[['reports', '📋 제보 접수'], ['notices', '📢 공지사항'], ['weather', '🌤 안전 날씨']].map(v =>
+    `<label class="chip"><input type="radio" name="vw" value="${v[0]}" ${state.view === v[0] ? 'checked' : ''}><span>${v[1]}</span></label>`).join('')}</div>`;
+}
+function bindViewSwitch(){
+  $('#viewSw').addEventListener('change', async e => {
+    state.view = e.target.value; state.editNotice = null;
+    if(state.view === 'notices') await loadNotices();
+    if(state.view === 'weather'){ state.weatherPick = null; await loadWeatherState(); }
+    renderDashboard();
+  });
+}
+async function loadNotices(){
+  try{ state.notices = await SB.listNotices(); }catch(e){ toast(e.message || '공지사항을 불러오지 못했습니다.'); }
+}
+function renderNoticeAdmin(){
+  const ed = state.editNotice;
+  root.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div><h2 style="margin:0">공지사항 관리</h2><p class="muted small">등록한 공지는 사이트 홈 화면의 공지사항에 바로 표시됩니다.</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a class="btn ghost" href="./">사이트 보기</a>
+        <button class="btn ghost" type="button" id="btnLogout">🔒 잠그기(로그아웃)</button>
+      </div>
+    </div>
+    ${viewSwitchHtml()}
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <h3 style="margin:0">${ed ? '공지 수정' : '새 공지 작성'}</h3>
+      <div class="field"><label for="nTitle" class="small muted">제목 (100자 이내)</label>
+        <input id="nTitle" class="input" type="text" maxlength="100" value="${esc(ed ? ed.title : '')}"></div>
+      <div class="field"><label for="nBody" class="small muted">내용 (2,000자 이내)</label>
+        <textarea id="nBody" class="input" maxlength="2000" style="min-height:140px">${esc(ed ? ed.body : '')}</textarea></div>
+      <label class="chk" style="border:0;padding:0"><input type="checkbox" id="nPinned" ${ed && ed.pinned ? 'checked' : ''}><span>📌 목록 맨 위에 고정</span></label>
+      <div class="err" id="nErr" role="alert"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn primary" type="button" id="nSave" style="flex:1">${ed ? '수정 저장' : '공지 등록'}</button>
+        ${ed ? '<button class="btn ghost" type="button" id="nCancel">수정 취소</button>' : ''}
+      </div>
+    </div>
+    <div class="list" id="nList">
+      ${state.notices.length ? state.notices.map(n => `
+        <div class="card">
+          <div class="item-top">${n.pinned ? '<span class="npin">📌 고정</span>' : ''}<b>${esc(n.title)}</b></div>
+          <div class="muted small">${esc(fmtDT(n.createdAt))}</div>
+          <p class="n-prev">${esc(n.body)}</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn ghost" type="button" data-edit="${esc(n.id)}">수정</button>
+            <button class="btn danger" type="button" data-del="${esc(n.id)}">삭제</button>
+          </div>
+        </div>`).join('') : '<div class="empty">등록된 공지사항이 없습니다.</div>'}
+    </div>`;
+  bindViewSwitch();
+  $('#btnLogout').addEventListener('click', () => { SB.logout(); state.reports = []; state.notices = []; state.view = 'reports'; renderLogin('로그아웃되었습니다.'); });
+  const nErr = msg => { $('#nErr').textContent = msg; };
+  $('#nSave').addEventListener('click', async () => {
+    const title = $('#nTitle').value.trim(), body = $('#nBody').value.trim(), pinned = $('#nPinned').checked;
+    if(!title) return nErr('제목을 입력해 주세요.');
+    const b = $('#nSave'); b.disabled = true; nErr('');
+    try{
+      if(ed) await SB.updateNotice(ed.id, { title:title, body:body, pinned:pinned });
+      else await SB.createNotice({ title:title, body:body, pinned:pinned });
+      state.editNotice = null; await loadNotices(); renderNoticeAdmin();
+      toast(ed ? '공지를 수정했습니다.' : '공지를 등록했습니다.');
+    }catch(e){
+      if(e.status === 401){ renderLogin('세션이 만료되었습니다. 다시 로그인해 주세요.'); return; }
+      nErr(e.message || '저장하지 못했습니다.'); b.disabled = false;
+    }
+  });
+  const cancel = $('#nCancel'); if(cancel) cancel.addEventListener('click', () => { state.editNotice = null; renderNoticeAdmin(); });
+  $$('[data-edit]', root).forEach(b => b.addEventListener('click', () => {
+    state.editNotice = state.notices.find(n => String(n.id) === b.dataset.edit) || null;
+    renderNoticeAdmin(); window.scrollTo({ top:0, behavior:'smooth' });
+  }));
+  $$('[data-del]', root).forEach(b => {
+    let armed = false;
+    b.addEventListener('click', async () => {
+      if(!armed){ armed = true; b.textContent = '정말 삭제할까요? 한 번 더 누르세요'; setTimeout(() => { armed = false; if(b.isConnected) b.textContent = '삭제'; }, 4000); return; }
+      b.disabled = true;
+      try{ await SB.deleteNotice(b.dataset.del); if(state.editNotice && String(state.editNotice.id) === b.dataset.del) state.editNotice = null; await loadNotices(); renderNoticeAdmin(); toast('공지를 삭제했습니다.'); }
+      catch(e){ if(e.status === 401){ renderLogin('세션이 만료되었습니다. 다시 로그인해 주세요.'); return; } toast(e.message || '삭제하지 못했습니다.'); b.disabled = false; }
+    });
+  });
+}
+
+/* ===================== 오늘의 안전 날씨 관리 ===================== */
+async function loadWeatherState(){
+  try{ state.weather = await SB.getWeather(); }
+  catch(e){ state.weather = null; if(e.status !== 404) toast(e.message || '안전 날씨를 불러오지 못했습니다.'); }
+}
+function renderWeatherAdmin(){
+  const cur = state.weather;
+  const pick = state.weatherPick || (cur ? cur.level : '맑음');
+  const tip = WX.todayTip(window.CONTENT.TIPS);
+  root.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div><h2 style="margin:0">오늘의 안전 날씨</h2><p class="muted small">선택한 단계가 사이트 홈 화면 맨 위에 "오늘은 ○○ 단계"로 표시됩니다.</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a class="btn ghost" href="./">사이트 보기</a>
+        <button class="btn ghost" type="button" id="btnLogout">🔒 잠그기(로그아웃)</button>
+      </div>
+    </div>
+    ${viewSwitchHtml()}
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <h3 style="margin:0">오늘의 단계 선택</h3>
+      <div class="wx-pick" id="wxPick" role="radiogroup" aria-label="오늘의 안전 날씨 단계">
+        ${WX.levels.map(l => `<label class="wx-opt ${WX.info[l].cls}"><input type="radio" name="wxl" value="${l}" ${pick === l ? 'checked' : ''}><span class="wx-box">${ART[WX.info[l].icon]}<b>${l} 단계</b></span></label>`).join('')}
+      </div>
+      <div class="err" id="wErr" role="alert"></div>
+      <button class="btn primary block" type="button" id="wSave">저장</button>
+      <p class="muted small">${cur ? '현재 홈 화면 표시: <b>오늘은 ' + esc(cur.level) + ' 단계</b> (' + esc(fmtDT(cur.updatedAt)) + ' 설정)' : '아직 저장된 단계가 없습니다. 저장하면 홈 화면에 표시됩니다.'}</p>
+    </div>
+    <h3 style="margin:6px 0 0">홈 화면 미리보기</h3>
+    <div id="wxPreview">${WX.render({ state:'ok', level:pick, tip:tip, dateLabel:'미리보기' })}</div>`;
+  bindViewSwitch();
+  $('#btnLogout').addEventListener('click', () => { SB.logout(); state.reports = []; state.notices = []; state.view = 'reports'; renderLogin('로그아웃되었습니다.'); });
+  $('#wxPick').addEventListener('change', e => {
+    state.weatherPick = e.target.value;
+    $('#wxPreview').innerHTML = WX.render({ state:'ok', level:state.weatherPick, tip:tip, dateLabel:'미리보기' });
+  });
+  $('#wSave').addEventListener('click', async () => {
+    const level = state.weatherPick || pick;
+    const b = $('#wSave'); b.disabled = true; $('#wErr').textContent = '';
+    try{
+      await SB.setWeather(level);
+      state.weatherPick = null; await loadWeatherState(); renderWeatherAdmin();
+      toast('오늘의 안전 날씨를 "' + level + ' 단계"로 저장했습니다.');
+    }catch(e){
+      if(e.status === 401){ renderLogin('세션이 만료되었습니다. 다시 로그인해 주세요.'); return; }
+      $('#wErr').textContent = e.message || '저장하지 못했습니다.'; b.disabled = false;
+    }
+  });
 }
 
 function closeOverlay(){

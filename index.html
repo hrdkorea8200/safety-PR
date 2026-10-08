@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./app.css">
+<link rel="stylesheet" href="./shoot.css">
 </head>
 <body>
 <header class="top">
@@ -24,16 +25,23 @@
 </header>
 <main class="wrap">
   <section id="p-home" class="panel" aria-label="홈"></section>
+  <section id="p-menu" class="panel" aria-label="바로가기" hidden></section>
   <section id="p-rules" class="panel" aria-label="안전수칙" hidden></section>
   <section id="p-emergency" class="panel" aria-label="비상대응" hidden></section>
   <section id="p-report" class="panel" aria-label="안전신문고" hidden></section>
+  <section id="p-shoot" class="panel" aria-label="촬영안전" hidden></section>
 </main>
 <nav class="tabs" id="tabs" role="tablist" aria-label="메뉴"></nav>
 <div id="overlayRoot"></div>
+<dialog id="shDlg"></dialog>
 <div id="toastRoot" aria-live="polite"></div>
 <script src="./site.config.js"></script>
 <script src="./content.js"></script>
+<script src="./art.js"></script>
 <script src="./common.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="./shoot-data.js"></script>
+<script src="./shoot.js"></script>
 <script src="./sb.js"></script>
 <script src="./app.js"></script>
 </body>

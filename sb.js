@@ -133,5 +133,53 @@ SB.photoObjectUrl = async function(id, idx){
   return URL.createObjectURL(await res.blob());
 };
 
+/* ---------- 공지사항 (읽기: 누구나 / 등록·수정·삭제: 관리자) ---------- */
+function noticeToApi(r){
+  return { id:r.id, title:r.title, body:r.body || '', pinned:!!r.pinned, createdAt:r.created_at, updatedAt:r.updated_at };
+}
+SB.listNotices = async function(){
+  const res = await raw('/rest/v1/notices?select=*&order=pinned.desc,created_at.desc&limit=50');
+  if(!res.ok) throw { status:res.status, message:'공지사항을 불러오지 못했습니다.' };
+  return (await res.json()).map(noticeToApi);
+};
+SB.createNotice = async function(n){
+  const res = await authed('/rest/v1/notices', { method:'POST', headers:{ 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify({ title:n.title, body:n.body, pinned:!!n.pinned }) });
+  if(!res.ok) throw { status:res.status, message:'공지를 등록하지 못했습니다.' };
+  const d = await json(res);
+  if(!Array.isArray(d) || !d.length) throw { status:403, message:'공지를 등록할 권한이 없습니다.' };
+};
+SB.updateNotice = async function(id, n){
+  const res = await authed('/rest/v1/notices?id=eq.' + encodeURIComponent(id), { method:'PATCH', headers:{ 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify({ title:n.title, body:n.body, pinned:!!n.pinned }) });
+  if(!res.ok) throw { status:res.status, message:'공지를 수정하지 못했습니다.' };
+  const d = await json(res);
+  if(!Array.isArray(d) || !d.length) throw { status:403, message:'수정 권한이 없거나 이미 삭제된 공지입니다.' };
+};
+SB.deleteNotice = async function(id){
+  const res = await authed('/rest/v1/notices?id=eq.' + encodeURIComponent(id), { method:'DELETE', headers:{ Prefer:'return=representation' } });
+  if(!res.ok) throw { status:res.status, message:'공지를 삭제하지 못했습니다.' };
+  const d = await json(res);
+  if(!Array.isArray(d) || !d.length) throw { status:403, message:'삭제 권한이 없거나 이미 삭제된 공지입니다.' };
+};
+
+/* ---------- 오늘의 안전 날씨 (읽기: 누구나 / 변경: 관리자) ---------- */
+SB.getWeather = async function(){
+  const res = await raw('/rest/v1/safety_weather?select=level,updated_at&id=eq.1');
+  if(!res.ok) throw { status:res.status, message:'안전 날씨를 불러오지 못했습니다.' };
+  const d = await res.json();
+  if(!Array.isArray(d) || !d.length) throw { status:404, message:'안전 날씨가 아직 설정되지 않았습니다.' };
+  return { level:d[0].level, updatedAt:d[0].updated_at };
+};
+SB.setWeather = async function(level){
+  let res = await authed('/rest/v1/safety_weather?id=eq.1', { method:'PATCH', headers:{ 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify({ level:level }) });
+  if(!res.ok) throw { status:res.status, message:'안전 날씨를 저장하지 못했습니다.' };
+  let d = await json(res);
+  if(Array.isArray(d) && d.length) return;
+  /* 설정 줄이 없으면 새로 만듭니다 */
+  res = await authed('/rest/v1/safety_weather', { method:'POST', headers:{ 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify({ id:1, level:level }) });
+  if(!res.ok) throw { status:res.status, message:'안전 날씨를 저장하지 못했습니다.' };
+  d = await json(res);
+  if(!Array.isArray(d) || !d.length) throw { status:403, message:'변경 권한이 없습니다.' };
+};
+
 window.SB = SB;
 })();

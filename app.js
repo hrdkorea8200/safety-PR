@@ -14,26 +14,43 @@ const ICONS = {
   rules:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/>',
   emergency:'<path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5"/><path d="M12 18h.01"/>',
   report:'<path d="M3 11v2a1 1 0 001 1h2l7 4V6L6 10H4a1 1 0 00-1 1z"/><path d="M16 9a4 4 0 010 6"/><path d="M19 6.5a8 8 0 010 11"/>',
+  shoot:'<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/>',
+  menu:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
   admin:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="M9 12h6M9 16h4"/>'
 };
+/* 화면(페이지) 목록: 주소(#id)로 열 수 있는 모든 화면 */
 const TABS = [
-  { id:'home', label:'홈' }, { id:'rules', label:'안전수칙' },
-  { id:'emergency', label:'비상대응', alert:true }, { id:'report', label:'안전신문고' },
-  { id:'admin', label:'관리자', href:'admin.html' }   /* 누르면 숫자 암호 입력 화면으로 이동 */
+  { id:'home' }, { id:'menu' }, { id:'rules' }, { id:'emergency' }, { id:'report' }, { id:'shoot' },
+  { id:'admin', href:'admin.html' }   /* 숫자 암호 입력 화면으로 이동 */
 ];
-let currentTab = (location.hash || '').replace('#','');
+/* 하단 메뉴는 3칸만: 홈 / 바로가기 / 안전신문고. 안전수칙·비상대응·촬영안전은 '바로가기'(또는 홈 퀵 메뉴)로 들어가며, 그 화면에서는 '바로가기'가 켜져 있습니다. */
+const BAR = [
+  { id:'home',   label:'홈',        on:['home'] },
+  { id:'menu',   label:'바로가기',  on:['menu','rules','emergency','shoot'] },
+  { id:'report', label:'안전신문고', on:['report'] }
+];
+/* 주소 형식: #탭  또는  #탭/세부 (예: #shoot/camera-01) */
+function hashParts(){
+  const h = (location.hash || '').replace(/^#/, ''), i = h.indexOf('/');
+  if(i < 0) return [h, ''];
+  let sub = h.slice(i + 1); try{ sub = decodeURIComponent(sub); }catch(e){}
+  return [h.slice(0, i), sub];
+}
+let currentTab = hashParts()[0];
 if(!TABS.some(t => t.id === currentTab && !t.href)) currentTab = 'home';
 function renderTabs(){
-  $('#tabs').innerHTML = TABS.map(t =>
-    `<button class="tab${t.alert?' alert':''}" role="tab" type="button" data-tab="${t.id}" aria-selected="${t.id===currentTab}">
+  $('#tabs').innerHTML = BAR.map(t =>
+    `<button class="tab" role="tab" type="button" data-tab="${t.id}" aria-selected="${t.on.includes(currentTab)}">
        <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[t.id]}</svg><span>${t.label}</span></button>`).join('');
   $$('main > .panel').forEach(p => p.hidden = (p.id !== 'p-' + currentTab));
+  if(currentTab === 'shoot' && window.ShootUI) window.ShootUI.route(hashParts()[1]);
 }
 function go(id){
   const tt = TABS.find(t => t.id === id);
   if(tt && tt.href){ location.href = tt.href; return; }
-  currentTab = id; renderTabs();
+  currentTab = id;
   try{ history.replaceState(null, '', '#' + id); }catch(e){}
+  renderTabs();
   window.scrollTo({ top:0, behavior:'auto' });
 }
 document.addEventListener('click', e => {
@@ -41,31 +58,36 @@ document.addEventListener('click', e => {
   const g = e.target.closest('[data-go]'); if(g){ go(g.dataset.go); }
 });
 window.addEventListener('hashchange', () => {
-  const h = (location.hash || '').replace('#','');
-  if(TABS.some(t => t.id === h && !t.href) && h !== currentTab){ currentTab = h; renderTabs(); window.scrollTo({ top:0 }); }
+  const hp = hashParts(), h = hp[0];
+  if(!TABS.some(t => t.id === h && !t.href)) return;
+  if(h !== currentTab){ currentTab = h; renderTabs(); window.scrollTo({ top:0 }); }
+  else if(h === 'shoot' && window.ShootUI){ window.ShootUI.route(hp[1]); }   /* 촬영안전 안에서 장비·메뉴 이동 */
 });
 
 /* ===================== 홈 ===================== */
 function renderHome(){
-  const _t = new Date(); const day = Math.floor(Date.UTC(_t.getFullYear(), _t.getMonth(), _t.getDate()) / 86400000);  /* 날짜가 바뀔 때마다 다음 문구 */
+  const tip = WX.todayTip(TIPS);
   $('#p-home').innerHTML = `
-    <div class="hero">
-      <div class="eyebrow">SAFE OFFICE</div>
-      <h1>${esc(CONFIG.orgName)}<br>사무실 안전 지킴이</h1>
-      <p>${esc(CONFIG.tagline)}</p>
-      <div class="hero-actions">
-        <button class="btn warn" type="button" data-go="report">📣 안전신문고 제보하기</button>
-        <a class="btn glass" href="tel:119">🚨 119 신고</a>
-      </div>
-    </div>
-    <div class="card tip"><div class="tip-label">오늘의 안전 한마디</div><p>${esc(TIPS[day % TIPS.length])}</p></div>
+    <h1 class="sr-only">${esc(CONFIG.orgName)} 사무실 안전 지킴이</h1>
 
-    <h2>이 사이트에서 할 수 있는 일</h2>
-    <div class="grid2">
-      <button class="feature" type="button" data-go="rules"><span class="em">🛡️</span><b>안전수칙</b><span>넘어짐·전기·화재·자세 등 분야별 수칙과 내 자리 셀프체크</span></button>
-      <button class="feature" type="button" data-go="emergency"><span class="em">🚨</span><b>비상대응</b><span>긴급 연락처, 화재·지진·응급처치 행동 요령</span></button>
-      <button class="feature" type="button" data-go="report" style="grid-column:1/-1;background:var(--warn-soft);border-color:transparent"><span class="em">📣</span><b>안전신문고</b><span>근로자 · 수급업체 · 고객 누구나, 사진과 함께 아차사고와 위험요소를 알려주세요. 익명도 가능합니다.</span></button>
-    </div>
+    <div id="wxSlot">${WX.render({ state:'loading', tip:tip })}</div>
+
+    <h2 class="q-title">안전 서비스 바로가기</h2>
+    <nav class="quick" aria-label="안전 서비스 바로가기">
+      <button class="qtile" type="button" data-go="rules" aria-label="안전정보 바로가기">${ART.helmet}<b>안전정보</b><span>바로가기 ›</span></button>
+      <button class="qtile" type="button" data-go="report" aria-label="안전신문고 바로가기">${ART.bubble}<b>안전신문고</b><span>바로가기 ›</span></button>
+      <button class="qtile q-emg" type="button" data-go="emergency" aria-label="비상대응 바로가기">${ART.siren}<b>비상대응</b><span>바로가기 ›</span></button>
+    </nav>
+    <button class="qwide" type="button" data-go="shoot" aria-label="촬영현장 안전가이드 바로가기">${ART.camera}<span class="qw-txt"><b>촬영현장 안전가이드</b><span>카메라 · 드론 · 조명 등 장비별 안전 수칙</span></span><i aria-hidden="true">›</i></button>
+    <a class="btn ghost block" href="tel:119">🚨 긴급 상황이면 119 전화</a>
+
+    <section class="card notice-card" aria-label="공지사항">
+      <div class="notice-head">
+        <div><h2>📢 공지사항</h2><p class="muted small">안전과 관련한 소식을 알려 드립니다.</p></div>
+        <div class="mascot-wrap"><img class="mascot" src="./mascot.png" alt="확성기로 안내하는 한국산업인력공단 캐릭터" width="112" height="88"></div>
+      </div>
+      <div id="noticeList" class="notice-list"><p class="muted small">불러오는 중…</p></div>
+    </section>
 
     <h2>아차사고, 왜 중요할까요?</h2>
     <div class="card">
@@ -82,9 +104,67 @@ function renderHome(){
     <ol class="rules10">${RULES10.map(r => `<li>${esc(r)}</li>`).join('')}</ol>`;
 }
 
+/* ===================== 바로가기 (모든 안전 서비스 모음) ===================== */
+function renderMenu(){
+  $('#p-menu').innerHTML = `
+    <div class="page-head">
+      <div>
+        <h2 style="margin-top:0">바로가기</h2>
+        <p class="muted">필요한 안전 정보를 골라 보세요.</p>
+      </div>
+      ${window.U.mascotDuo()}
+    </div>
+    <nav class="quick" aria-label="안전 서비스 바로가기">
+      <button class="qtile" type="button" data-go="rules" aria-label="안전정보 바로가기">${ART.helmet}<b>안전정보</b><span>사무실 안전수칙</span></button>
+      <button class="qtile q-emg" type="button" data-go="emergency" aria-label="비상대응 바로가기">${ART.siren}<b>비상대응</b><span>연락처 · 대피</span></button>
+      <button class="qtile" type="button" data-go="shoot" aria-label="촬영현장 안전가이드 바로가기">${ART.camera}<b>촬영안전</b><span>장비별 수칙</span></button>
+    </nav>
+    <button class="qwide" type="button" data-go="report" aria-label="안전신문고 바로가기">${ART.bubble}<span class="qw-txt"><b>안전신문고</b><span>아차사고 · 위험요소를 사진과 함께 제보</span></span><i aria-hidden="true">›</i></button>
+    <a class="btn ghost block" href="tel:119">🚨 긴급 상황이면 119 전화</a>
+    <button class="btn ghost block" type="button" data-go="admin">🔒 관리자 (제보 확인 · 공지 관리)</button>`;
+}
+
+/* ===================== 오늘의 안전 날씨 (이용자 화면) ===================== */
+function bindMascots(){
+  $$('.mascot').forEach(im => { if(im.dataset.bound) return; im.dataset.bound = '1'; im.addEventListener('error', () => { const w = im.closest('.mascot-wrap'); if(w) w.hidden = true; }); });
+}
+async function loadWeather(){
+  const slot = $('#wxSlot'); if(!slot) return;
+  const tip = WX.todayTip(TIPS);
+  if(!SB.configured()){ slot.innerHTML = WX.render({ state:'error', tip:tip }); bindMascots(); return; }
+  try{ const w = await SB.getWeather(); slot.innerHTML = WX.render({ state:'ok', level:w.level, updatedAt:w.updatedAt, tip:tip }); }
+  catch(e){ slot.innerHTML = WX.render({ state:'error', tip:tip }); }
+  bindMascots();
+}
+
+/* ===================== 공지사항 (이용자 화면) ===================== */
+function fmtDate(v){
+  const d = new Date(v); if(isNaN(d)) return '';
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '.' + p(d.getMonth() + 1) + '.' + p(d.getDate());
+}
+async function loadNotices(){
+  const box = $('#noticeList'); if(!box) return;
+  if(!SB.configured()){ box.innerHTML = '<p class="muted small">공지사항이 아직 연결되지 않았습니다.</p>'; return; }
+  try{ renderNotices(await SB.listNotices()); }
+  catch(e){ box.innerHTML = '<p class="muted small">공지사항을 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.</p>'; }
+}
+function renderNotices(list){
+  const box = $('#noticeList'); if(!box) return;
+  if(!list.length){ box.innerHTML = '<p class="muted">등록된 공지사항이 없습니다.</p>'; return; }
+  const SHOW = 5;
+  box.innerHTML = list.map((n, i) => `<details class="notice-item${n.pinned ? ' pinned' : ''}"${i === 0 ? ' open' : ''}${i >= SHOW ? ' data-more hidden' : ''}>
+      <summary><span class="n-title">${n.pinned ? '<span class="npin">📌 고정</span>' : ''}${esc(n.title)}</span><span class="n-date">${esc(fmtDate(n.createdAt))}</span></summary>
+      <div class="n-body">${esc(n.body) || '<span class="muted">(내용 없음)</span>'}</div></details>`).join('')
+    + (list.length > SHOW ? `<button class="btn ghost block" type="button" id="noticeMore">이전 공지 더 보기 (${list.length - SHOW}건)</button>` : '');
+  const more = $('#noticeMore');
+  if(more) more.addEventListener('click', () => { $$('#noticeList [data-more]').forEach(d => d.hidden = false); more.remove(); });
+}
+
 /* ===================== 안전수칙 ===================== */
 function accordion(item, open){
   const lists = [];
+  if(item.art === 'eco') lists.push(window.U.mascotEco());
   if(item.intro) lists.push(`<p>${item.intro}</p>`);
   if(item.do) lists.push(`<div class="lbl ok">이렇게 해요</div><ul class="ul ok">${item.do.map(x => `<li>${x}</li>`).join('')}</ul>`);
   if(item.dont) lists.push(`<div class="lbl no">하지 않아요</div><ul class="ul no">${item.dont.map(x => `<li>${x}</li>`).join('')}</ul>`);
@@ -94,9 +174,12 @@ function accordion(item, open){
 }
 function renderRules(){
   $('#p-rules').innerHTML = `
-    <div>
-      <h2 style="margin-top:0">안전수칙</h2>
-      <p class="muted">분야를 눌러 자세한 수칙을 확인하세요.</p>
+    <div class="page-head">
+      <div>
+        <h2 style="margin-top:0">안전수칙</h2>
+        <p class="muted">분야를 눌러 자세한 수칙을 확인하세요.</p>
+      </div>
+      ${window.U.mascotDuo()}
     </div>
     <div class="card">
       <h3>✅ 내 자리 안전 셀프체크</h3>
@@ -117,9 +200,12 @@ function renderRules(){
 /* ===================== 비상대응 ===================== */
 function renderEmergency(){
   $('#p-emergency').innerHTML = `
-    <div>
-      <h2 style="margin-top:0">비상대응</h2>
-      <p class="muted">급박한 위험이라면 이 페이지에서 제보하지 말고 <b>먼저 전화</b>하세요.</p>
+    <div class="page-head">
+      <div>
+        <h2 style="margin-top:0">비상대응</h2>
+        <p class="muted">급박한 위험이라면 이 페이지에서 제보하지 말고 <b>먼저 전화</b>하세요.</p>
+      </div>
+      ${window.U.mascotDuo()}
     </div>
     <div class="card">
       <h3>📞 긴급 연락처</h3>
@@ -146,9 +232,12 @@ const form = { photos:[], busy:false, processing:false };
 function renderReport(){
   const placeOpts = CONFIG.places.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
   $('#p-report').innerHTML = `
-    <div>
-      <h2 style="margin-top:0">📣 안전신문고</h2>
-      <p class="muted">아차사고, 사고, 위험요소, 개선 아이디어를 자유롭게 알려주세요. 근로자 · 수급업체 · 고객 누구나 제보할 수 있고, <b>이름 없이 익명</b>으로도 가능합니다.</p>
+    <div class="page-head">
+      <div>
+        <h2 style="margin-top:0">📣 안전신문고</h2>
+        <p class="muted">아차사고, 사고, 위험요소, 개선 아이디어를 자유롭게 알려주세요. 근로자 · 수급업체 · 고객 누구나 제보할 수 있고, <b>이름 없이 익명</b>으로도 가능합니다.</p>
+      </div>
+      ${window.U.mascotDuo()}
     </div>
     <div id="rBanner"></div>
     <div id="rWrap" class="stack" style="gap:18px">
@@ -357,5 +446,8 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape'){ const lb = $
 window.U.initTheme();
 $('#orgName').textContent = CONFIG.orgName;
 document.title = CONFIG.orgName + ' · 사무실 안전 지킴이';
-renderHome(); renderRules(); renderEmergency(); renderReport(); renderTabs();
+renderHome(); renderMenu(); renderRules(); renderEmergency(); renderReport(); renderTabs();
+loadWeather();
+loadNotices();
+bindMascots();
 })();
