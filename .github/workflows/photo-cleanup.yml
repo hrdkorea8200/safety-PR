@@ -1,0 +1,29 @@
+name: Photo cleanup (30 days)
+on:
+  schedule:
+    - cron: '23 18 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '시험 실행(지우지 않고 대상만 확인)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Purge old photos
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          RETENTION_DAYS: '30'
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+        run: node scripts/purge-photos.mjs
