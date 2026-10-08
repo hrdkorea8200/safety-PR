@@ -20,13 +20,13 @@ const ICONS = {
 };
 /* 화면(페이지) 목록: 주소(#id)로 열 수 있는 모든 화면 */
 const TABS = [
-  { id:'home' }, { id:'menu' }, { id:'rules' }, { id:'emergency' }, { id:'report' }, { id:'shoot' }, { id:'eco' },
+  { id:'home' }, { id:'menu' }, { id:'rules' }, { id:'emergency' }, { id:'report' }, { id:'shoot' }, { id:'eco' }, { id:'search' }, { id:'quiz' },
   { id:'admin', href:'admin.html' }   /* 숫자 암호 입력 화면으로 이동 */
 ];
 /* 하단 메뉴는 3칸만: 홈 / 바로가기 / 안전신문고. 안전수칙·비상대응·촬영안전은 '바로가기'(또는 홈 퀵 메뉴)로 들어가며, 그 화면에서는 '바로가기'가 켜져 있습니다. */
 const BAR = [
   { id:'home',   label:'홈',        on:['home'] },
-  { id:'menu',   label:'바로가기',  on:['menu','rules','emergency','shoot','eco'] },
+  { id:'menu',   label:'바로가기',  on:['menu','rules','emergency','shoot','eco','search','quiz'] },
   { id:'report', label:'안전신문고', on:['report'] }
 ];
 /* 주소 형식: #탭  또는  #탭/세부 (예: #shoot/camera-01) */
@@ -44,6 +44,7 @@ function renderTabs(){
        <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[t.id]}</svg><span>${t.label}</span></button>`).join('');
   $$('main > .panel').forEach(p => p.hidden = (p.id !== 'p-' + currentTab));
   if(currentTab === 'shoot' && window.ShootUI) window.ShootUI.route(hashParts()[1]);
+  if(window.Extras) window.Extras.onShow(currentTab);
 }
 function go(id){
   const tt = TABS.find(t => t.id === id);
@@ -95,6 +96,10 @@ function renderHome(){
 
     <h2 class="q-title">안전·환경 서비스 바로가기</h2>
     ${quickTiles()}
+
+    <div id="campSlot"></div>
+    <div id="quizSlot"></div>
+
     <h2>아차사고, 왜 중요할까요?</h2>
     <div class="card">
       <p><b>아차사고</b>란 사고로 이어질 뻔했지만 다행히 다치거나 피해가 없었던 상황입니다. 하인리히 법칙(1:29:300)으로 널리 알려진 것처럼, 큰 사고 뒤에는 수많은 작은 징후가 있습니다.</p>
@@ -121,6 +126,10 @@ function renderMenu(){
       ${window.U.mascotDuo()}
     </div>
     ${quickTiles()}
+    <div class="menu-more">
+      <button class="btn ghost" type="button" data-go="search">🔍 전체 검색</button>
+      <button class="btn ghost" type="button" data-go="quiz">🧠 오늘의 퀴즈</button>
+    </div>
     <button class="btn ghost block" type="button" data-go="admin">🔒 관리자 (제보 확인 · 공지 관리)</button>`;
 }
 
@@ -134,6 +143,8 @@ function renderEco(){
       </div>
       ${window.U.mascotEco(true)}
     </div>
+
+    <div id="ecoChallenge"></div>
 
     <h2>친환경 실천 8가지</h2>
     <ol class="rules10">${ECO_TOP.map(r => `<li>${esc(r)}</li>`).join('')}</ol>
@@ -273,6 +284,59 @@ function renderEmergency(){
 /* ===================== 안전신문고 (제보 폼) ===================== */
 const form = { photos:[], busy:false, processing:false };
 
+/* ----- 접수번호로 처리 결과 조회 (제보자용: 상태와 공개된 처리 결과만 보여 줍니다) ----- */
+function lookupCardHtml(){
+  return `<details class="card lookup" id="lkBox">
+      <summary>🔎 접수번호로 처리 결과 조회</summary>
+      <div class="lk-body">
+        <p class="muted small">제보할 때 받은 접수번호(예: SF-261008-AB12C)를 입력하면 처리 상태와 공개된 처리 결과를 볼 수 있어요. 익명으로 제보했어도 조회됩니다.</p>
+        <div class="lk-row">
+          <input id="lkId" class="input" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="20" placeholder="SF-YYMMDD-XXXXX" aria-label="접수번호">
+          <button class="btn primary" type="button" id="lkBtn">조회</button>
+        </div>
+        <div id="lkRes" aria-live="polite"></div>
+      </div>
+    </details>`;
+}
+const LK_RE = /^SF-[0-9]{6}-[0-9A-F]{5}$/;
+const LK_STEPS = ['접수', '검토중', '조치완료'];
+function lookupResultHtml(r){
+  const at = LK_STEPS.indexOf(r.status);
+  const cls = r.status === '조치완료' ? 'b-done' : r.status === '검토중' ? 'b-wip' : 'b-new';
+  const msg = r.status === '조치완료' ? '조치가 완료되었습니다.' : r.status === '검토중' ? '담당자가 내용을 검토하고 있습니다.' : '제보가 접수되었습니다. 곧 담당자가 확인합니다.';
+  return `<div class="lk-card">
+      <div class="lk-top"><span class="badge ${cls}">${esc(r.status)}</span><b>${esc(r.id)}</b></div>
+      <ol class="lk-steps" aria-label="처리 단계">${LK_STEPS.map((s, i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}"><i>${i < at || (i === at && at === 2) ? '✓' : i + 1}</i><span>${s}</span></li>`).join('')}</ol>
+      <p>${msg}</p>
+      <dl class="kv"><dt>유형</dt><dd>${esc(r.category)}</dd><dt>접수일</dt><dd>${esc(fmtDate(r.createdAt))}</dd><dt>최근 처리일</dt><dd>${esc(fmtDate(r.updatedAt))}</dd></dl>
+      <div class="lk-reply"><b>📝 처리 결과</b><p>${r.reply ? esc(r.reply) : '<span class="muted">아직 공개된 처리 결과가 없습니다. 처리 결과가 등록되면 이곳에 안내됩니다.</span>'}</p></div>
+    </div>`;
+}
+async function doLookup(){
+  const box = $('#lkRes'), btn = $('#lkBtn'); if(!box) return;
+  const id = $('#lkId').value.trim().toUpperCase().replace(/\s+/g, '');
+  $('#lkId').value = id;
+  if(!LK_RE.test(id)){ box.innerHTML = '<p class="err">접수번호는 SF-날짜6자리-5자리(영문 A~F·숫자) 형식입니다. 예: SF-261008-AB12C</p>'; return; }
+  if(!SB.configured()){ box.innerHTML = '<p class="err">서버 연결 설정이 아직 되지 않았습니다. 관리자에게 문의해 주세요.</p>'; return; }
+  btn.disabled = true; box.innerHTML = '<p class="muted small">조회 중…</p>';
+  try{
+    const r = await SB.lookupReport(id);
+    box.innerHTML = r ? lookupResultHtml(r) : '<p class="err">해당 접수번호를 찾을 수 없습니다. 번호를 다시 확인해 주세요. (삭제된 제보는 조회되지 않습니다)</p>';
+  }catch(e){ box.innerHTML = '<p class="err">' + esc(e.message || '조회하지 못했습니다.') + '</p>'; }
+  btn.disabled = false;
+}
+function bindLookup(){
+  const b = $('#lkBtn'); if(!b) return;
+  b.addEventListener('click', doLookup);
+  $('#lkId').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); doLookup(); } });
+}
+function openLookup(id){
+  const box = $('#lkBox'); if(!box) return;
+  box.open = true; if(id) $('#lkId').value = id;
+  box.scrollIntoView({ behavior:'smooth', block:'start' });
+  if(id) doLookup();
+}
+
 function renderReport(){
   const placeOpts = CONFIG.places.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
   $('#p-report').innerHTML = `
@@ -283,6 +347,7 @@ function renderReport(){
       </div>
       ${window.U.mascotDuo()}
     </div>
+    ${lookupCardHtml()}
     <div id="rBanner"></div>
     <div id="rWrap" class="stack" style="gap:18px">
       <div class="banner danger"><span>🚨</span><div><b>생명·신체에 급박한 위험이 있나요?</b>이 제보보다 먼저 <a href="tel:119" style="color:inherit">119</a> 또는 비상연락처로 연락해 주세요.</div></div>
@@ -322,7 +387,7 @@ function renderReport(){
         <input type="file" id="fCam" accept="image/*" capture="environment" hidden>
         <input type="file" id="fAlbum" accept="image/*" multiple hidden>
         <div class="thumbs" id="thumbs"></div>
-        <span class="hint" id="photoHint">얼굴·차량번호·개인정보 등이 찍히지 않도록 주의해 주세요. 사진은 자동으로 압축되며 위치정보(GPS)는 제거됩니다.</span></div>
+        <span class="hint" id="photoHint">얼굴·차량번호·개인정보 등이 찍히지 않도록 주의해 주세요. 사진은 자동으로 압축되며 위치정보(GPS)는 제거됩니다. 사진은 접수 후 30일이 지나면 자동으로 삭제됩니다.</span></div>
 
       <div class="field">
         <label class="chk" style="border:0;padding:0"><input type="checkbox" id="fWantReply"><span>처리 결과를 받고 싶어요 (연락처 남기기, 선택)</span></label>
@@ -340,6 +405,7 @@ function renderReport(){
     </div>
     <div id="rDone" class="card" hidden></div>`;
 
+  bindLookup();
   $('#fWhen').value = nowLocal(); $('#fWhen').max = nowLocal();
   $('#fContent').addEventListener('input', e => { $('#cnt').textContent = e.target.value.length + ' / 1000'; });
   $('#fWantReply').addEventListener('change', e => { $('#contactBox').hidden = !e.target.checked; });
@@ -470,11 +536,21 @@ function showDone(id, photoFailed){
       <h2 style="margin:0">제보가 접수되었습니다</h2>
       <p class="muted">소중한 의견 감사합니다. 담당자가 확인 후 조치합니다.</p>
       <div class="rid">${esc(id)}</div>
-      <p class="hint">접수번호를 기록해 두면 문의할 때 편리합니다.</p>
+      <p class="hint">접수번호를 꼭 기록해 두세요. 나중에 <b>처리 결과 조회</b>에서 처리 상태와 결과를 확인할 수 있습니다. 사진은 접수 후 30일이 지나면 자동으로 삭제됩니다.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+        <button class="btn ghost" type="button" id="btnCopyId">접수번호 복사</button>
+        <button class="btn ghost" type="button" id="btnLookupNow">처리 결과 조회</button>
+      </div>
       ${photoFailed ? `<div class="banner warn"><span>⚠️</span><div>사진 ${photoFailed}장은 저장하지 못했습니다. 필요하면 다시 제보해 주세요.</div></div>` : ''}
       <button class="btn primary" type="button" id="btnAgain">새 제보 작성하기</button>
     </div>`;
   $('#btnAgain').addEventListener('click', () => { form.photos = []; renderReport(); window.scrollTo({ top:0 }); });
+  $('#btnCopyId').addEventListener('click', () => {
+    const ok = () => toast('접수번호를 복사했습니다.');
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(id).then(ok).catch(() => window.prompt('접수번호를 복사하세요', id));
+    else window.prompt('접수번호를 복사하세요', id);
+  });
+  $('#btnLookupNow').addEventListener('click', () => openLookup(id));
   window.scrollTo({ top:0, behavior:'smooth' });
 }
 function openLightbox(src){
@@ -491,7 +567,9 @@ window.U.initTheme();
 $('#orgName').textContent = CONFIG.orgName;
 document.title = (CONFIG.siteTitle || '안전·환경 지킴이') + ' · ' + CONFIG.orgName;
 const bs = $('#siteSub'); if(bs) bs.textContent = CONFIG.siteTitle || '안전·환경 지킴이';
-renderHome(); renderMenu(); renderEco(); renderRules(); renderEmergency(); renderReport(); renderTabs();
+renderHome(); renderMenu(); renderEco(); renderRules(); renderEmergency(); renderReport();
+if(window.Extras){ window.Extras.init(); window.Extras.mountHome(); window.Extras.mountEco(); }
+renderTabs();
 loadWeather();
 loadNotices();
 bindMascots();

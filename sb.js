@@ -101,6 +101,40 @@ SB.uploadPhoto = async function(id, idx, blob){
   if(!res.ok) throw { status:res.status, message:'사진 업로드 실패' };
 };
 
+/* ---------- 공개: 접수번호로 처리 결과 조회 (상태와 "공개 처리 결과"만 돌려줍니다) ---------- */
+SB.lookupReport = async function(id){
+  const res = await raw('/rest/v1/rpc/report_status', { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ p_id:String(id || '') }) });
+  if(!res.ok){
+    const d = await json(res) || {};
+    if(/RATE_LIMIT/.test(d.message || '')) throw { status:429, message:'조회가 너무 많습니다. 잠시 후 다시 시도해 주세요.' };
+    if(res.status === 404) throw { status:404, message:'조회 기능이 아직 설정되지 않았습니다. 관리자에게 문의해 주세요. (add_features.sql)' };
+    throw { status:res.status, message:'조회하지 못했습니다. 잠시 후 다시 시도해 주세요.' };
+  }
+  const d = await json(res);
+  if(!Array.isArray(d) || !d.length) return null;
+  const r = d[0];
+  return { id:r.id, status:r.status, category:r.category, createdAt:r.created_at, updatedAt:r.updated_at, reply:r.reply || '' };
+};
+
+/* ---------- 이달의 안전·친환경 캠페인 (읽기: 누구나 / 변경: 관리자) ---------- */
+function campaignToApi(r){
+  return { ym:r.ym || '', safetyTitle:r.safety_title || '', safetyBody:r.safety_body || '', ecoTitle:r.eco_title || '', ecoBody:r.eco_body || '', updatedAt:r.updated_at };
+}
+SB.getCampaign = async function(){
+  const res = await raw('/rest/v1/campaign?select=*&id=eq.1');
+  if(!res.ok) throw { status:res.status, message:'캠페인 설정을 불러오지 못했습니다.' };
+  const d = await res.json();
+  if(!Array.isArray(d) || !d.length) return null;
+  return campaignToApi(d[0]);
+};
+SB.setCampaign = async function(c){
+  const body = { ym:c.ym || '', safety_title:c.safetyTitle || '', safety_body:c.safetyBody || '', eco_title:c.ecoTitle || '', eco_body:c.ecoBody || '' };
+  const res = await authed('/rest/v1/campaign?id=eq.1', { method:'PATCH', headers:{ 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify(body) });
+  if(!res.ok) throw { status:res.status, message:await why(res, '캠페인을 저장하지 못했습니다.') };
+  const d = await json(res);
+  if(!Array.isArray(d) || !d.length) throw { status:403, message:'캠페인을 저장할 권한이 없거나 설정이 아직 만들어지지 않았습니다. (add_features.sql 실행 확인)' };
+};
+
 /* ---------- 관리자: 조회 / 처리 / 삭제 / 사진 ---------- */
 function toApi(r){
   return {
@@ -109,7 +143,7 @@ function toApi(r){
     place:r.place, placeDetail:r.place_detail || '', content:r.content,
     photoCount:r.photo_count || 0, anonymous:!!r.anonymous,
     contactName:r.contact_name || '', contactInfo:r.contact_info || '',
-    status:r.status, memo:r.memo || ''
+    status:r.status, memo:r.memo || '', reply:r.reply || '', photosPurgedAt:r.photos_purged_at || null
   };
 }
 SB.listReports = async function(){
@@ -119,7 +153,7 @@ SB.listReports = async function(){
 };
 SB.updateReport = async function(id, patch){
   const res = await authed('/rest/v1/reports?id=eq.' + encodeURIComponent(id), { method:'PATCH', headers:{ 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify(patch) });
-  if(!res.ok) throw { status:res.status, message:'저장하지 못했습니다.' };
+  if(!res.ok) throw { status:res.status, message:await why(res, '저장하지 못했습니다.') };
   const d = await json(res);
   if(!Array.isArray(d) || !d.length) throw { status:403, message:'저장 권한이 없거나 이미 삭제된 제보입니다.' };
 };

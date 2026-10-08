@@ -122,7 +122,7 @@ function renderList(){
     </div>
     <a class="sh-commonlink" href="#shoot/common">
       <span style="font-size:28px" aria-hidden="true">🦺</span>
-      <span><b>현장 공통 안전 수칙</b><small>촬영 전 브리핑 · 날씨별 대응 · 친환경 촬영 · 응급처치</small></span>
+      <span><b>현장 공통 안전 수칙</b><small>촬영 전 브리핑 · 출연자 안전 · 날씨별 대응 · 친환경 촬영 · 응급처치</small></span>
       <span class="sh-go" aria-hidden="true">›</span>
     </a>
     <input class="sh-search" id="shQ" type="search" placeholder="장비 이름 검색" aria-label="장비 검색" autocomplete="off">
@@ -247,6 +247,14 @@ function renderCommon(){
       <h2 id="shHB"><span class="sh-sg sh-sg-mand" aria-hidden="true">✓</span>촬영 전 5분 안전 브리핑</h2>
       <p class="sh-hint">전원이 모인 자리에서 하나씩 확인하고 체크하세요.</p>
       ${checklistBox([['', COMMON.briefing]], 'common')}
+    </section>
+
+    <section class="sh-card mand" aria-labelledby="shHC">
+      <h2 id="shHC"><span class="sh-sg sh-sg-mand" aria-hidden="true">✓</span>출연자 안전 (아동 · 군중 통제)</h2>
+      <p class="sh-hint">출연자와 현장에 있는 사람들이 다치지 않도록, 촬영 전에 확인하세요.</p>
+      ${accHTML(COMMON.cast, true)}
+      <h3 class="sh-gh" style="margin-top:16px">출연자 안전 체크리스트</h3>
+      ${checklistBox(COMMON.castCheck, 'cast')}
     </section>
 
     <section class="sh-card warn" aria-labelledby="shHW">

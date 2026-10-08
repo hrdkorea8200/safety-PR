@@ -45,6 +45,15 @@ document.addEventListener('error', function(e){
   var t = e.target;
   if(t && t.classList && t.classList.contains('pg-mascot')){ var w = t.closest('.pg-mascot-wrap'); (w || t).hidden = true; }
 }, true);
+/* 글자 크기·고대비 설정을 페이지가 열리자마자 적용합니다 (설정 화면은 extras.js) */
+(function(){
+  try{
+    var fs = JSON.parse(localStorage.getItem('a11y_fs') || '"0"'), hc = JSON.parse(localStorage.getItem('a11y_hc') || '"0"');
+    var r = document.documentElement;
+    if(String(fs) === '1' || String(fs) === '2') r.setAttribute('data-fs', String(fs));
+    if(String(hc) === '1') r.setAttribute('data-contrast', 'high');
+  }catch(e){}
+})();
 window.U = U;
 })();
 
