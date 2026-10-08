@@ -223,7 +223,7 @@ function renderWeatherAdmin(){
   const tip = WX.todayTip(window.CONTENT.TIPS);
   root.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <div><h2 style="margin:0">오늘의 안전 날씨</h2><p class="muted small">선택한 단계가 사이트 홈 화면 맨 위에 "오늘은 ○○ 단계"로 표시됩니다.</p></div>
+      <div><h2 style="margin:0">오늘의 안전 날씨</h2><p class="muted small">선택한 상태가 사이트 홈 화면 맨 위에 "오늘의 안전 날씨는 ○○"로 표시됩니다.</p></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a class="btn ghost" href="./">사이트 보기</a>
         <button class="btn ghost" type="button" id="btnLogout">🔒 잠그기(로그아웃)</button>
@@ -231,13 +231,13 @@ function renderWeatherAdmin(){
     </div>
     ${viewSwitchHtml()}
     <div class="card" style="display:flex;flex-direction:column;gap:12px">
-      <h3 style="margin:0">오늘의 단계 선택</h3>
-      <div class="wx-pick" id="wxPick" role="radiogroup" aria-label="오늘의 안전 날씨 단계">
-        ${WX.levels.map(l => `<label class="wx-opt ${WX.info[l].cls}"><input type="radio" name="wxl" value="${l}" ${pick === l ? 'checked' : ''}><span class="wx-box">${ART[WX.info[l].icon]}<b>${l} 단계</b></span></label>`).join('')}
+      <h3 style="margin:0">오늘의 안전 날씨 선택</h3>
+      <div class="wx-pick" id="wxPick" role="radiogroup" aria-label="오늘의 안전 날씨">
+        ${WX.levels.map(l => `<label class="wx-opt ${WX.info[l].cls}"><input type="radio" name="wxl" value="${l}" ${pick === l ? 'checked' : ''}><span class="wx-box">${ART[WX.info[l].icon]}<b>${l}</b></span></label>`).join('')}
       </div>
       <div class="err" id="wErr" role="alert"></div>
       <button class="btn primary block" type="button" id="wSave">저장</button>
-      <p class="muted small">${cur ? '현재 홈 화면 표시: <b>오늘은 ' + esc(cur.level) + ' 단계</b> (' + esc(fmtDT(cur.updatedAt)) + ' 설정)' : '아직 저장된 단계가 없습니다. 저장하면 홈 화면에 표시됩니다.'}</p>
+      <p class="muted small">${cur ? '현재 홈 화면 표시: <b>오늘의 안전 날씨는 ' + esc(cur.level) + '</b> (' + esc(fmtDT(cur.updatedAt)) + ' 설정)' : '아직 저장된 상태가 없습니다. 저장하면 홈 화면에 표시됩니다.'}</p>
     </div>
     <h3 style="margin:6px 0 0">홈 화면 미리보기</h3>
     <div id="wxPreview">${WX.render({ state:'ok', level:pick, tip:tip, dateLabel:'미리보기' })}</div>`;
@@ -253,7 +253,7 @@ function renderWeatherAdmin(){
     try{
       await SB.setWeather(level);
       state.weatherPick = null; await loadWeatherState(); renderWeatherAdmin();
-      toast('오늘의 안전 날씨를 "' + level + ' 단계"로 저장했습니다.');
+      toast('오늘의 안전 날씨를 "' + level + '"(으)로 저장했습니다.');
     }catch(e){
       if(e.status === 401){ renderLogin('세션이 만료되었습니다. 다시 로그인해 주세요.'); return; }
       $('#wErr').textContent = e.message || '저장하지 못했습니다.'; b.disabled = false;

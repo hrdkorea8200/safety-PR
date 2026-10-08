@@ -71,12 +71,12 @@ window.WX = (function(){
     const lv = LV[o.level], ok = o.state === 'ok' && !!lv;
     const cls = ok ? lv.cls : 'wx-none';
     const icon = ok ? window.ART[lv.icon] : window.ART.cloud;
-    const main = ok ? esc(o.level) + ' 단계' : (o.state === 'loading' ? '확인 중…' : '확인 불가');
+    const main = ok ? esc(o.level) : (o.state === 'loading' ? '확인 중…' : '확인 불가');
     const date = o.dateLabel != null ? o.dateLabel : (ok ? dateText(o.updatedAt) : '');
     return '<section class="wx ' + cls + '" aria-label="오늘의 안전 날씨">'
-      + '<div class="wx-head"><h2>오늘의 안전 날씨</h2>' + (date ? '<span class="wx-date">' + esc(date) + '</span>' : '') + '</div>'
+      + '<div class="wx-head">' + (date ? '<span class="wx-date">' + esc(date) + '</span>' : '') + '</div>'
       + '<div class="wx-level"><div class="wx-ico">' + icon + '</div>'
-      + '<div class="wx-title"><span>오늘은</span><b>' + main + '</b></div></div>'
+      + '<div class="wx-title"><p class="wx-sentence"><span class="wx-lead">오늘의 안전 날씨는</span> <b>' + main + '</b></p></div></div>'
       + '<div class="mascot-wrap"><img class="mascot" src="./mascot-safety.png" alt="안전제일 깃발을 든 한국산업인력공단 캐릭터" width="104" height="110"></div>'
       + (o.state === 'error' ? '<p class="wx-note">안전 날씨를 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.</p>' : '')
       + '<div class="wx-tip"><b>오늘의 안전 한마디</b><p>' + esc(o.tip) + '</p></div>'
