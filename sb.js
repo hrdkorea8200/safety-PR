@@ -30,6 +30,13 @@ async function raw(path, opts, token){
   catch(e){ throw { status:0, message:'네트워크 연결을 확인해 주세요.' }; }
 }
 async function json(res){ try{ return await res.json(); }catch(e){ return null; } }
+/* 서버가 거절한 이유(HTTP 코드와 서버 메시지)를 오류 문구 뒤에 붙여 원인을 바로 알 수 있게 합니다 */
+async function why(res, fallback){
+  let d = null; try{ d = await res.clone().json(); }catch(e){}
+  const code = (d && (d.code || d.error_code)) || '';
+  const msg = (d && (d.message || d.msg || d.error_description)) || '';
+  return fallback + ' (코드 ' + res.status + (code ? ' ' + code : '') + (msg ? ' · ' + String(msg).slice(0, 140) : '') + ')';
+}
 
 /* ---------- 관리자 인증 ---------- */
 function storeTokens(d){
@@ -144,19 +151,19 @@ SB.listNotices = async function(){
 };
 SB.createNotice = async function(n){
   const res = await authed('/rest/v1/notices', { method:'POST', headers:{ 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify({ title:n.title, body:n.body, pinned:!!n.pinned }) });
-  if(!res.ok) throw { status:res.status, message:'공지를 등록하지 못했습니다.' };
+  if(!res.ok) throw { status:res.status, message:await why(res, '공지를 등록하지 못했습니다.') };
   const d = await json(res);
   if(!Array.isArray(d) || !d.length) throw { status:403, message:'공지를 등록할 권한이 없습니다.' };
 };
 SB.updateNotice = async function(id, n){
   const res = await authed('/rest/v1/notices?id=eq.' + encodeURIComponent(id), { method:'PATCH', headers:{ 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify({ title:n.title, body:n.body, pinned:!!n.pinned }) });
-  if(!res.ok) throw { status:res.status, message:'공지를 수정하지 못했습니다.' };
+  if(!res.ok) throw { status:res.status, message:await why(res, '공지를 수정하지 못했습니다.') };
   const d = await json(res);
   if(!Array.isArray(d) || !d.length) throw { status:403, message:'수정 권한이 없거나 이미 삭제된 공지입니다.' };
 };
 SB.deleteNotice = async function(id){
   const res = await authed('/rest/v1/notices?id=eq.' + encodeURIComponent(id), { method:'DELETE', headers:{ Prefer:'return=representation' } });
-  if(!res.ok) throw { status:res.status, message:'공지를 삭제하지 못했습니다.' };
+  if(!res.ok) throw { status:res.status, message:await why(res, '공지를 삭제하지 못했습니다.') };
   const d = await json(res);
   if(!Array.isArray(d) || !d.length) throw { status:403, message:'삭제 권한이 없거나 이미 삭제된 공지입니다.' };
 };
@@ -171,12 +178,12 @@ SB.getWeather = async function(){
 };
 SB.setWeather = async function(level){
   let res = await authed('/rest/v1/safety_weather?id=eq.1', { method:'PATCH', headers:{ 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify({ level:level }) });
-  if(!res.ok) throw { status:res.status, message:'안전 날씨를 저장하지 못했습니다.' };
+  if(!res.ok) throw { status:res.status, message:await why(res, '안전 날씨를 저장하지 못했습니다.') };
   let d = await json(res);
   if(Array.isArray(d) && d.length) return;
   /* 설정 줄이 없으면 새로 만듭니다 */
   res = await authed('/rest/v1/safety_weather', { method:'POST', headers:{ 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify({ id:1, level:level }) });
-  if(!res.ok) throw { status:res.status, message:'안전 날씨를 저장하지 못했습니다.' };
+  if(!res.ok) throw { status:res.status, message:await why(res, '안전 날씨를 저장하지 못했습니다.') };
   d = await json(res);
   if(!Array.isArray(d) || !d.length) throw { status:403, message:'변경 권한이 없습니다.' };
 };
