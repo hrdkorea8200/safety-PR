@@ -18,9 +18,9 @@
 :root[data-theme="dark"] #p-shoot{
   --sh-red:#FF5468; --sh-red-bg:#2A1519; --sh-blue:#5AA2FF; --sh-green:#3FCF85; --sh-green-bg:#11261C;
 }
-#p-shoot ul,#p-shoot ol{padding:0;list-style:none;margin:0}
-#p-shoot a{color:inherit}
-#p-shoot h1,#p-shoot h2,#p-shoot h3{margin:0}
+:where(#p-shoot) :is(ul,ol){padding:0;list-style:none;margin:0}
+:where(#p-shoot) a{color:inherit}
+:where(#p-shoot) :is(h1,h2,h3){margin:0}
 
 /* ---------- 하위 메뉴 ---------- */
 .sh-subnav{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
@@ -102,18 +102,15 @@
 .sh-nevers li:first-child{border-top:0;padding-top:2px}
 .sh-nevers li::before{content:"✕";flex:none;color:var(--sh-red);font-weight:900}
 
-details.sh-acc{border:1px solid var(--sh-line);border-radius:12px;margin-bottom:8px;background:var(--sh-surf)}
-details.sh-acc summary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:50px}
+details.sh-acc{border:1px solid var(--sh-line);border-radius:16px;margin-bottom:8px;background:var(--sh-surf);overflow:hidden}
+details.sh-acc summary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:700;display:flex;align-items:center;gap:12px;min-height:56px}
 details.sh-acc summary::-webkit-details-marker{display:none}
-details.sh-acc summary::after{content:"＋";font-weight:900;color:var(--sh-muted);flex:none}
+details.sh-acc summary::after{content:"＋";margin-left:auto;font-weight:400;color:var(--sh-muted);flex:none}
 details.sh-acc[open] summary::after{content:"－"}
-details.sh-acc[open]{border-color:var(--sh-ink)}
-details.sh-acc .sh-accb{padding:0 16px 12px}
-details.sh-acc .sh-accb li{display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--sh-line)}
-details.sh-acc ul.sh-accb li::before{content:"•";flex:none;font-weight:900;color:var(--sh-muted)}
-details.sh-acc ol.sh-accb{counter-reset:shs}
-details.sh-acc ol.sh-accb li{counter-increment:shs}
-details.sh-acc ol.sh-accb li::before{content:counter(shs);flex:none;width:26px;height:26px;border-radius:50%;background:var(--sh-green);color:#fff;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+/* 목록: 사이트의 비상대응 화면과 같은 "번호 동그라미" 모양 */
+details.sh-acc .sh-accb{padding:2px 16px 16px;display:flex;flex-direction:column;gap:8px;font-size:15px;counter-reset:shs}
+details.sh-acc .sh-accb li{counter-increment:shs;position:relative;display:block;padding:0 0 0 36px;border:0;min-height:24px}
+details.sh-acc .sh-accb li::before{content:counter(shs);position:absolute;left:0;top:1px;width:24px;height:24px;border-radius:50%;background:var(--info-soft);color:var(--info);display:grid;place-items:center;font-weight:800;font-size:13px}
 
 .sh-mis li{padding:12px 0;border-top:1px solid var(--sh-line)}
 .sh-mis li:first-child{border-top:0;padding-top:0}
